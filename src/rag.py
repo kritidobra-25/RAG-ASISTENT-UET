@@ -16,6 +16,38 @@ import llm
 
 # Fraza me të cilën asistenti fillon kur nuk e gjen informacionin.
 # evaluate.py e përdor për të numëruar automatikisht refuzimet.
+# Etiketat e brendshme të kërkimit nuk duhet të shfaqen kurrë te përgjigjja.
+_LABEL = r"(?:Fragmenti|Fragment|Chunk|Retrieved chunk|Context|Konteksti)"
+_LABEL_GROUP = re.compile(
+    rf"[\[\(]\s*{_LABEL}\s*(\d+(?:\s*(?:,|dhe|and|&|-)\s*\d+)*)\s*[\]\)]", re.IGNORECASE
+)
+_LABEL_BARE = re.compile(rf"\b{_LABEL}\s*(\d+)\b", re.IGNORECASE)
+
+
+def citation(chunk: dict) -> str:
+    """Citimi i lexueshëm i një segmenti: 'Emri i programit, f. 3' ose vetëm emri."""
+    return f"{chunk['program']}, f. {chunk['page']}" if chunk.get("page") else chunk["program"]
+
+
+def sanitize_labels(text: str, chunks: list[dict]) -> str:
+    """Zëvendëson etiketat e brendshme (p.sh. [Fragmenti 3]) me citimin e dokumentit."""
+
+    def replace(match: re.Match, wrap: bool) -> str:
+        numbers = [int(n) for n in re.findall(r"\d+", match.group(1))]
+        cites = list(dict.fromkeys(citation(chunks[n - 1]) for n in numbers if 1 <= n <= len(chunks)))
+        cites = [c for c in cites if "f. " in c or not any(o.startswith(c + ", f.") for o in cites)]
+        if not cites:
+            return ""
+        joined = "; ".join(cites)
+        return f"({joined})" if wrap else joined
+
+    text = _LABEL_GROUP.sub(lambda m: replace(m, True), text)
+    text = _LABEL_BARE.sub(lambda m: replace(m, False), text)
+    text = re.sub(r"\b(?:retrieved chunks?|chunks?)\b\s*\d*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\(\s*\)", "", text)
+    return re.sub(r"[ \t]+([.,;])", r"\1", text)
+
+
 REFUSAL_PREFIX = "Nuk e gjej këtë informacion në dokumentet e disponueshme."
 
 SYSTEM_PROMPT = f"""Je asistenti inteligjent i Universitetit Europian të Tiranës (UET) për studentët aktualë dhe kandidatët e mundshëm.
@@ -26,7 +58,7 @@ Rregullat:
 2. Çdo fragment fillon me emrin e programit. Nëse pyetja përmend një program, përdor vetëm fragmentet e atij programi.
 3. Nëse pyetja nuk e specifikon programin dhe informacioni ndryshon mes programeve, trego përgjigjen për secilin program veç e veç.
 4. Nëse informacioni nuk gjendet në fragmente, fillo përgjigjen saktësisht me: "{REFUSAL_PREFIX}" dhe këshillo studentin të kontaktojë administratën e UET-së.
-5. Përgjigju në shqip, shkurt dhe qartë. Për kredite ECTS, vit dhe semestër, përdor vlerat saktësisht siç shfaqen në fragmente.
+5. Përgjigju në shqip, shkurt dhe qartë. Citimet: pas çdo fakti të rëndësishëm për UET-në shkruaj burimin në kllapa, p.sh. (Master i Shkencave në Inxhinieri Informatike, f. 1). Nëse faqja mungon, shkruaj "Burimi: emri i programit". Mos përmend kurrë etiketa të brendshme si "Fragmenti 1", "chunk" ose "kontekst", dhe mos shkruaj numra fragmentesh; thuaj "dokumentet". Për kredite ECTS, vit dhe semestër, përdor vlerat saktësisht siç shfaqen në fragmente.
 6. Përjashtim nga rregulli 4: nëse mesazhi është vetëm përshëndetje ose bisedë e shkurtër (p.sh. "përshëndetje", "si je", "faleminderit"), mos përdor frazën e refuzimit. Përgjigju shkurt dhe miqësisht dhe thuaji se mund ta ndihmosh me pyetje rreth programeve të studimit të UET-së, si profilet, lëndët, kreditet ECTS dhe mundësitë e punësimit. Pyetjet faktike që nuk gjenden në fragmente vazhdojnë të marrin përgjigjen e refuzimit.
 7. Nëse mesazhi përmban "Profili i studentit", përdore për të personalizuar përgjigjen: rendit sipas rëndësisë programet dhe lëndët që i përshtaten interesit, nivelit, eksperiencës, objektivit dhe preferencës së tij. Profili nuk është burim fakti: emrat e programeve, lëndët, kreditet ECTS dhe mundësitë e punësimit merren vetëm nga fragmentet. Nëse asnjë program nuk i përshtatet qartë profilit, thuaje hapur dhe trego programin më të afërt që gjendet në fragmente."""
 
@@ -128,9 +160,8 @@ class RagAssistant:
     @staticmethod
     def _build_context(chunks: list[dict]) -> str:
         blocks = []
-        for number, chunk in enumerate(chunks, start=1):
-            page = f" | Faqja: {chunk['page']}" if chunk.get("page") else ""
-            blocks.append(f"[Fragmenti {number} | Dokumenti: {chunk['source']}{page}]\n{chunk['text']}")
+        for chunk in chunks:
+            blocks.append(f"[Burimi: {citation(chunk)}]\n{chunk['text']}")
         return "\n\n---\n\n".join(blocks)
 
     def answer(self, question: str, k: int = config.TOP_K) -> dict:
@@ -147,16 +178,18 @@ class RagAssistant:
                 f"Fragmentet e dokumenteve:\n\n{self._build_context(chunks)}\n\n"
                 f"Pyetja e studentit: {question}"
             )
-        text = llm.chat_completion(SYSTEM_PROMPT, user_prompt)
+        text = sanitize_labels(llm.chat_completion(SYSTEM_PROMPT, user_prompt), chunks)
         finished = time.perf_counter()
 
         sources = []
-        seen = set()
+        by_key: dict[tuple[str, str], dict] = {}
         for chunk in chunks:
             key = (chunk["program"], chunk["source"])
-            if key not in seen:
-                seen.add(key)
-                sources.append({"program": chunk["program"], "source": chunk["source"]})
+            if key not in by_key:
+                by_key[key] = {"program": chunk["program"], "source": chunk["source"], "pages": []}
+                sources.append(by_key[key])
+            if chunk.get("page") and chunk["page"] not in by_key[key]["pages"]:
+                by_key[key]["pages"].append(chunk["page"])
 
         return {
             "question": question,

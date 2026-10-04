@@ -18,7 +18,7 @@ import re
 import config
 import intent as intent_module
 import llm
-from rag import REFUSAL_PREFIX, SYSTEM_PROMPT, RagAssistant, is_small_talk
+from rag import REFUSAL_PREFIX, SYSTEM_PROMPT, RagAssistant, is_small_talk, sanitize_labels
 from student_profile import (
     follow_up_question,
     merge_profile,
@@ -32,9 +32,10 @@ from student_profile import (
 MAX_FOLLOW_UPS = 2
 
 COMMON_RULES = """Rregulla shtesë për përgjigjet e personalizuara:
-- Faktet për UET-në (programe, lëndë, ECTS, profile, mundësi karriere) merren VETËM nga fragmentet dhe shoqërohen me [Fragmenti n]. Mos shpik programe, lëndë, tarifa, kushte pranimi apo mundësi karriere.
+- Faktet për UET-në (programe, lëndë, ECTS, profile, mundësi karriere) merren VETËM nga fragmentet dhe shoqërohen me burimin në kllapa, p.sh. (Emri i programit, f. 2), ose "Burimi: emri i programit" kur faqja mungon. Mos shpik programe, lëndë, tarifa, kushte pranimi apo mundësi karriere.
 - Profili i studentit nuk është burim fakti. Çdo gjykim që vjen nga profili, jo nga fragmentet, shënoje me "(interpretim)".
 - Nëse një pjesë e kërkuar nuk gjendet te fragmentet, shkruaj saktësisht: "Nuk e gjej këtë informacion në dokumentet e disponueshme." për atë pjesë dhe vazhdo me pjesët e tjera.
+- Mos përmend kurrë etiketa të brendshme si "Fragmenti 1", "chunk" ose "kontekst", dhe mos shkruaj numra fragmentesh. Thuaj "dokumentet" dhe cito vetëm emrin e programit dhe faqen.
 - Mos shkruaj seksionin "Burimet": shtohet automatikisht nga sistemi.
 - Mos jep pikë numerike ose përqindje. Për përshtatshmërinë përdor vetëm "e lartë", "e mesme", "e ulët" ose "pa të dhëna", me arsyetim nga fragmentet.
 - Përgjigju në shqip. Përdor titujt Markdown "##" saktësisht siç janë dhënë."""
@@ -43,7 +44,7 @@ STRUCTURE = """## Rekomandimi
 [programi ose rruga e rekomanduar]
 
 ## Pse i përshtatet profilit tënd
-[2 deri 4 pika; çdo pikë lidh një element të profilit me një fakt nga fragmentet, me [Fragmenti n]]
+[2 deri 4 pika; çdo pikë lidh një element të profilit me një fakt nga fragmentet, me burimin (Emri i programit, f. N)]
 
 ## Lëndët përkatëse
 [lista e lëndëve nga fragmentet, me vit/semestër dhe ECTS kur shfaqen]
@@ -58,7 +59,7 @@ STRUCTURE = """## Rekomandimi
 [vetëm mundësitë që përmenden te fragmentet për atë program]"""
 
 GAP_RULES = """Për "Boshllëqet e aftësive": krahaso aftësitë aktuale të studentit me ato që mbështeten nga fragmentet (lëndë, objektiva, profile). Për çdo aftësi përdor formatin:
-**Aftësia** — Aktuale: [nga profili ose "nuk është dhënë"] | E kërkuar: [vetëm nëse fragmentet e tregojnë nivelin, përndryshe "nuk specifikohet në dokumente"] | Mbulohet nga: [lënda dhe [Fragmenti n], ose "asnjë lëndë e gjetur"] | Boshllëku: [asnjë / i vogël / i mesëm / i madh, vetëm kur niveli i kërkuar dihet; përndryshe "nuk përcaktohet"]
+**Aftësia** — Aktuale: [nga profili ose "nuk është dhënë"] | E kërkuar: [vetëm nëse fragmentet e tregojnë nivelin, përndryshe "nuk specifikohet në dokumente"] | Mbulohet nga: [lënda dhe burimi (Emri i programit, f. N), ose "asnjë lëndë e gjetur"] | Boshllëku: [asnjë / i vogël / i mesëm / i madh, vetëm kur niveli i kërkuar dihet; përndryshe "nuk përcaktohet"]
 Nëse dokumentet nuk përmbajnë rezultate të pritura të të nxënit ose nivele të kërkuara, thuaje hapur në fund të seksionit: "Dokumentet aktuale nuk përmbajnë nivele të kërkuara të aftësive, prandaj niveli i boshllëkut nuk mund të përcaktohet. Duhen shtuar rezultatet e të nxënit të lëndëve."."""
 
 INTENT_INSTRUCTIONS = {
@@ -70,13 +71,13 @@ INTENT_INSTRUCTIONS = {
 Struktura:
 
 ## Krahasimi
-[tabelë Markdown: rreshta = kriteret (përshtatja me profilin, përmbajtja e programimit, fokusi te të dhënat/fusha e objektivit, përputhja me karrierën); kolona = programet. Çdo qelizë: "e lartë", "e mesme", "e ulët" ose "pa të dhëna", me [Fragmenti n]]
+[tabelë Markdown: rreshta = kriteret (përshtatja me profilin, përmbajtja e programimit, fokusi te të dhënat/fusha e objektivit, përputhja me karrierën); kolona = programet. Çdo qelizë: "e lartë", "e mesme", "e ulët" ose "pa të dhëna", me burimin (Emri i programit, f. N)]
 
 ## Rekomandimi
 [programi më i përshtatshëm]
 
 ## Pse
-[arsyetim me pika, me [Fragmenti n]]
+[arsyetim me pika, me burimin (Emri i programit, f. N)]
 
 ## Lëndët përkatëse
 [lëndët kryesore të secilit program nga fragmentet]
@@ -159,7 +160,7 @@ class Advisor:
             + f"{INTENT_INSTRUCTIONS[intent]}\n\n{COMMON_RULES}\n\n"
             f"Pyetja e studentit: {question}"
         )
-        text = llm.chat_completion(SYSTEM_PROMPT, user_prompt)
+        text = sanitize_labels(llm.chat_completion(SYSTEM_PROMPT, user_prompt), chunks)
         refused = text.strip().startswith(REFUSAL_PREFIX)
         sources = [] if refused else attribute_sources(text, chunks)
         if sources:
@@ -173,30 +174,31 @@ class Advisor:
 
 # ---------- atribuimi i burimeve ----------
 def attribute_sources(text: str, chunks: list[dict]) -> list[dict]:
-    """Burimet e segmenteve që përgjigjja i citon me [Fragmenti n].
+    """Burimet që përgjigjja i citon sipas emrit të programit dhe faqes, p.sh.
+    "(Master i Shkencave në Financë, f. 2)".
 
-    Nëse përgjigjja nuk cakton asnjë citim të vlefshëm, kthehen të gjitha
-    burimet e kërkimit, që lexuesi të mos mbetet pa kontekst.
+    Nëse përgjigjja nuk emërton asnjë program, kthehen deri në 3 programet e para
+    të kërkimit, që lexuesi të mos mbetet pa kontekst.
     """
-    cited = {int(n) for n in re.findall(r"Fragmenti\s*(\d+)", text) if 1 <= int(n) <= len(chunks)}
-    numbers = sorted(cited) or list(range(1, len(chunks) + 1))
-    by_doc: dict[tuple[str, str], dict] = {}
-    for number in numbers:
-        chunk = chunks[number - 1]
-        entry = by_doc.setdefault(
-            (chunk["program"], chunk["source"]),
-            {"program": chunk["program"], "source": chunk["source"], "pages": [], "fragments": []},
-        )
-        if chunk.get("page") and chunk["page"] not in entry["pages"]:
-            entry["pages"].append(chunk["page"])
-        entry["fragments"].append(number)
-    return list(by_doc.values())
+    first_source: dict[str, str] = {}
+    for chunk in chunks:
+        first_source.setdefault(chunk["program"], chunk["source"])
+    programs = [p for p in first_source if p in text] or list(first_source)[:3]
+
+    sources = []
+    for program in programs:
+        pages: list[int] = []
+        for match in re.finditer(re.escape(program) + r"\s*,?\s*(?:f\.|faqja|faqe)\s*(\d+(?:\s*(?:,|-|–)\s*\d+)*)", text):
+            pages += [int(n) for n in re.findall(r"\d+", match.group(1))]
+        sources.append({"program": program, "source": first_source[program], "pages": sorted(set(pages))})
+    return sources
 
 
 def format_sources(sources: list[dict]) -> str:
     lines = ["## Burimet"]
     for entry in sources:
-        pages = f", faqja {', '.join(str(p) for p in sorted(entry['pages']))}" if entry["pages"] else ""
-        fragments = ", ".join(str(n) for n in entry["fragments"])
-        lines.append(f"- {entry['program']} ({entry['source']}{pages}), fragmenti {fragments}")
+        if entry["pages"]:
+            lines.append(f"- {entry['program']}, f. {', '.join(str(p) for p in entry['pages'])}")
+        else:
+            lines.append(f"- Burimi: {entry['program']}")
     return "\n".join(lines)

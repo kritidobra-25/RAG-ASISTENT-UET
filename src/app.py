@@ -129,11 +129,11 @@ def show_sources(sources: list[dict], chunks: list[dict]) -> None:
         st.markdown(badges, unsafe_allow_html=True)
         for source in sources:
             pages = source.get("pages")
-            st.caption(f"{source['source']}" + (f", faqja {', '.join(str(p) for p in sorted(pages))}" if pages else ""))
+            st.caption(f"{source['source']}" + (f", f. {', '.join(str(p) for p in sorted(pages))}" if pages else ""))
         st.divider()
-        for number, chunk in enumerate(chunks, start=1):
-            page = f", faqja {chunk['page']}" if chunk.get("page") else ""
-            st.caption(f"Fragmenti {number}: {chunk['source']}{page} (largësia {chunk['distance']:.3f})")
+        for chunk in chunks:
+            page = f", f. {chunk['page']}" if chunk.get("page") else ""
+            st.caption(f"{chunk['program']}{page}")
             st.text(chunk["text"])
 
 

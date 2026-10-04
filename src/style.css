@@ -14,8 +14,14 @@
     --button-text: #0F2537;
 }
 
-html, body, [class*="st-"], button, input, textarea {
+html, body, .stApp, p, li, h1, h2, h3, label, button, input, textarea {
     font-family: "Inter", sans-serif;
+}
+
+/* Ikonat e Streamlit (shigjeta e expander-it etj.) duhet të mbajnë fontin e tyre,
+   përndryshe emri i ikonës shfaqet si tekst dhe mbivendoset. */
+[data-testid="stIconMaterial"] {
+    font-family: "Material Symbols Rounded" !important;
 }
 
 [data-testid="stApp"], [data-testid="stHeader"] {
@@ -111,7 +117,7 @@ li {
 
 /* Teksti i bardhë për elementet e tjera */
 [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] *,
-[data-testid="stExpander"] summary, [data-testid="stExpander"] summary * {
+[data-testid="stExpander"] summary, [data-testid="stExpander"] summary p {
     color: var(--text);
 }
 

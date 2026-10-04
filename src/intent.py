@@ -44,6 +44,7 @@ SYSTEM_PROMPT = """You analyze one message from a student talking to a universit
     "academic_background": string|null,   // e.g. "Bachelor in Business Administration"
     "current_program": string|null,
     "current_level": string|null,         // e.g. "Bachelor", "Master"
+    "desired_program": "Master Profesional"|"Master Shkencor"|null,  // only if the student says which type of Master they want
     "technical_skills": [string],
     "experience_level": {skill: "beginner"|"intermediate"|"advanced"},
     "interests": [string],

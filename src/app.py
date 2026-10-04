@@ -17,8 +17,7 @@ from student_profile import is_empty, new_profile, profile_to_text  # noqa: E402
 from advisor import Advisor  # noqa: E402
 from rag import KnowledgeBaseMissingError, RagAssistant  # noqa: E402
 
-LEVEL_OPTIONS = ["", "Bachelor", "Master Profesional", "Master i Shkencave"]
-AREA_OPTIONS = ["", "Teknike / IT", "Biznes / Financë", "Inxhinieri", "E përzier"]
+PROGRAM_OPTIONS = ["Master Profesional", "Master Shkencor"]
 PATH_QUESTION = "Më sugjero rrugën akademike më të përshtatshme sipas profilit tim."
 
 LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "uet_logo.png"
@@ -51,28 +50,31 @@ with st.sidebar:
     st.image(str(LOGO_PATH), use_container_width=True)
     with st.expander("Profili im", expanded=not is_empty(st.session_state.get("profile"))):
         st.caption(
-            "Profili plotësohet vetë nga biseda dhe përditësohet teksa flet. Ruhet vetëm "
-            "në këtë sesion. Mos shkruaj emër ose të dhëna personale."
+            "Profili juaj plotësohet automatikisht gjatë bisedës dhe përditësohet sipas "
+            "informacionit që ndani. Të dhënat ruhen vetëm gjatë këtij sesioni."
         )
         profile = st.session_state.setdefault("profile", new_profile())
         summary = profile_to_text(profile)
-        st.markdown(summary if summary else "_Profili është ende bosh._")
+        st.markdown(summary if summary else "*Profili juaj është ende bosh.*")
 
         with st.form("profile_form"):
-            st.caption("Opsionale: ndrysho profilin manualisht.")
-            background = st.text_input("Sfondi akademik", profile["academic_background"], placeholder="p.sh. Bachelor në Administrim Biznesi")
-            goal = st.text_input("Objektivi i karrierës", profile["career_goal"], placeholder="p.sh. Data Engineer")
-            interests = st.text_input("Interesa (me presje)", ", ".join(profile["interests"]))
-            skills = st.text_input("Aftësi teknike (me presje)", ", ".join(profile["technical_skills"]), placeholder="p.sh. SQL, Python")
-            level = st.selectbox("Niveli akademik", LEVEL_OPTIONS, index=LEVEL_OPTIONS.index(profile["current_level"]) if profile["current_level"] in LEVEL_OPTIONS else 0)
-            area = st.selectbox("Fusha e preferuar", AREA_OPTIONS, index=AREA_OPTIONS.index(profile["preferred_area"]) if profile["preferred_area"] in AREA_OPTIONS else 0)
+            st.caption("Opsionale: Mund ta plotësoni ose ndryshoni profilin manualisht.")
+            background = st.text_input("Backgroundi akademik", profile["academic_background"], placeholder="p.sh. Bachelor në Administrim Biznesi")
+            goal = st.text_input("Karriera e dëshiruar", profile["career_goal"], placeholder="p.sh. Data Engineer")
+            interests = st.text_input("Fusha e interesit (psh: IT, Finance, Biznes)", ", ".join(profile["interests"]))
+            skills = st.text_input("Aftësi teknike", ", ".join(profile["technical_skills"]), placeholder="p.sh. SQL, Python")
+            program = st.selectbox(
+                "Programi i dëshiruar",
+                PROGRAM_OPTIONS,
+                index=PROGRAM_OPTIONS.index(profile["desired_program"]) if profile["desired_program"] in PROGRAM_OPTIONS else None,
+                placeholder="Zgjidh programin",
+            )
             if st.form_submit_button("Ruaj profilin", use_container_width=True):
                 profile["academic_background"] = background.strip()
                 profile["career_goal"] = goal.strip()
                 profile["interests"] = [x.strip() for x in interests.split(",") if x.strip()]
                 profile["technical_skills"] = [x.strip() for x in skills.split(",") if x.strip()]
-                profile["current_level"] = level
-                profile["preferred_area"] = area
+                profile["desired_program"] = program or ""
                 st.rerun()
 
         if st.button("Gjenero rrugën akademike", use_container_width=True, key="gen_path"):
@@ -131,7 +133,7 @@ for message in st.session_state["messages"]:
         if message["role"] == "assistant" and message.get("sources"):
             show_sources(message["sources"], message["chunks"])
 
-typed_question = st.chat_input("Shkruaj pyetjen tënde për UETAssist")
+typed_question = st.chat_input("Shkruaj pyetjen tënde për UETassist")
 question = typed_question or st.session_state.pop("pending_question", None)
 
 if question:

@@ -5,7 +5,9 @@ pyetje -> embedding -> kërkim në ChromaDB -> prompt me kontekst -> përgjigje.
 Përdoret njësoj nga query.py (terminali), app.py (ndërfaqja) dhe evaluate.py.
 """
 
+import re
 import time
+import unicodedata
 
 import chromadb
 
@@ -26,6 +28,38 @@ Rregullat:
 4. Nëse informacioni nuk gjendet në fragmente, fillo përgjigjen saktësisht me: "{REFUSAL_PREFIX}" dhe këshillo studentin të kontaktojë administratën e UET-së.
 5. Përgjigju në shqip, shkurt dhe qartë. Për kredite ECTS, vit dhe semestër, përdor vlerat saktësisht siç shfaqen në fragmente.
 6. Përjashtim nga rregulli 4: nëse mesazhi është vetëm përshëndetje ose bisedë e shkurtër (p.sh. "përshëndetje", "si je", "faleminderit"), mos përdor frazën e refuzimit. Përgjigju shkurt dhe miqësisht dhe thuaji se mund ta ndihmosh me pyetje rreth programeve të studimit të UET-së, si profilet, lëndët, kreditet ECTS dhe mundësitë e punësimit. Pyetjet faktike që nuk gjenden në fragmente vazhdojnë të marrin përgjigjen e refuzimit."""
+
+# Fraza hapëse dhe bisede e shkurtër (pa theksa, të vogla). Për to nuk kërkohet në
+# dokumente dhe nuk shfaqen burime.
+SMALL_TALK = (
+    "pershendetje", "pershendetje te gjitheve", "tung", "tungjatjeta", "hej", "hello", "hi",
+    "mire se vjen", "mireserdhe", "miredita", "mirembrema", "mirmengjes", "mire mengjes",
+    "si je", "si jeni", "si po ia kalon", "çfare ka", "cfare ka", "si ja kalon",
+    "faleminderit", "falemnderit", "shume faleminderit", "rrofsh", "flm",
+    "mire", "ne rregull", "ok", "okay", "pa pa", "mirupafshim", "naten e mire", "ciao",
+    "kush je", "kush jeni", "si quhesh", "si quheni",
+)
+
+
+def _normalize(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text.lower())
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", text).split())
+
+
+def is_small_talk(question: str) -> bool:
+    """True nëse mesazhi është vetëm përshëndetje ose bisedë e shkurtër."""
+    normalized = _normalize(question)
+    phrases = {_normalize(p) for p in SMALL_TALK}
+    if normalized in phrases:
+        return True
+    words = normalized.split()
+    # p.sh. "përshëndetje, si je?" ose "faleminderit shumë"
+    return 0 < len(words) <= 4 and all(
+        word in {w for p in phrases for w in p.split()} for word in words
+    )
+
+
 class KnowledgeBaseMissingError(RuntimeError):
     pass
 
@@ -83,13 +117,17 @@ class RagAssistant:
     def answer(self, question: str, k: int = config.TOP_K) -> dict:
         """Përgjigjet një pyetjeje. Kthen përgjigjen, burimet dhe kohët e matura."""
         started = time.perf_counter()
-        chunks = self.retrieve(question, k)
+        small_talk = is_small_talk(question)
+        chunks = [] if small_talk else self.retrieve(question, k)
         retrieval_done = time.perf_counter()
 
-        user_prompt = (
-            f"Fragmentet e dokumenteve:\n\n{self._build_context(chunks)}\n\n"
-            f"Pyetja e studentit: {question}"
-        )
+        if small_talk:
+            user_prompt = f"Mesazhi i studentit (bisedë e shkurtër, pa fragmente): {question}"
+        else:
+            user_prompt = (
+                f"Fragmentet e dokumenteve:\n\n{self._build_context(chunks)}\n\n"
+                f"Pyetja e studentit: {question}"
+            )
         text = llm.chat_completion(SYSTEM_PROMPT, user_prompt)
         finished = time.perf_counter()
 

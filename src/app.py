@@ -100,7 +100,6 @@ for message in st.session_state["messages"]:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant" and message.get("sources"):
-            st.caption(f"Koha e përgjigjes: {message['seconds']:.1f} s")
             show_sources(message["sources"], message["chunks"])
 
 typed_question = st.chat_input("Shkruaj pyetjen tënde për UET-në")
@@ -126,14 +125,13 @@ if question:
                 st.code(f"{type(error).__name__}: {error}")
         else:
             st.markdown(result["answer"])
-            st.caption(f"Koha e përgjigjes: {result['total_seconds']:.1f} s")
-            show_sources(result["sources"], result["chunks"])
+            if result["sources"]:
+                show_sources(result["sources"], result["chunks"])
             st.session_state["messages"].append(
                 {
                     "role": "assistant",
                     "content": result["answer"],
                     "sources": result["sources"],
                     "chunks": result["chunks"],
-                    "seconds": result["total_seconds"],
                 }
             )

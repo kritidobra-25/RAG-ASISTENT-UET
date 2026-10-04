@@ -130,3 +130,14 @@ Vendos PDF-të e reja te `data\` dhe ekzekuto përsëri `python src\build_index.
 | 3.8 Set pyetjesh testuese | `eval\test_questions.csv`, `evaluate.py` |
 | Kapitulli IV, Faza A | `extract_and_chunk.py`, `build_index.py` |
 | Kapitulli IV, Faza B | `rag.py`, `query.py`, `app.py` |
+
+## Këshilltari akademik i personalizuar
+
+Mbi RAG-un ekzistues, `src/advisor.py` shton një këshilltar akademik:
+
+- **Profili i studentit** (`src/student_profile.py`) plotësohet vetë nga biseda dhe përditësohet gjatë saj. Mund të ndryshohet edhe manualisht te shiriti anësor. Ruhet vetëm te sesioni i shfletuesit.
+- **Qëllimi i mesazhit** (`src/intent.py`) klasifikohet automatikisht. Pyetjet faktike (tarifa, kalendar, informacion programi) kalojnë te RAG standard pa ndryshim. Kërkesat e personalizuara (rekomandim, rrugë akademike, boshllëqe aftësish, krahasim programesh, "po sikur") marrin përgjigje të strukturuar me profilin.
+- **Pyetje ndjekëse** bëhen vetëm kur mungon informacion i nevojshëm, deri në 2 radhazi.
+- **Burimet** shfaqen me dokumentin dhe faqen, vetëm për fragmentet e cituara. Faqet shfaqen pasi të ekzekutosh përsëri `python src\build_index.py`.
+
+**Kufizim i njohur.** Analiza e boshllëqeve të aftësive kërkon rezultate të pritura të të nxënit ose nivele të kërkuara për lëndët. Dokumentet aktuale kanë vetëm objektiva, plane mësimore (lëndë dhe ECTS) dhe profile, prandaj sistemi tregon cilat lëndë mbulojnë një aftësi dhe e thotë hapur kur niveli i kërkuar nuk specifikohet. Për analizë më të saktë duhen shtuar te `data/` përshkrimet e lëndëve me rezultatet e të nxënit.

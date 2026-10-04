@@ -57,6 +57,7 @@ def build_index() -> int:
                     "source": c["source"],
                     "program": c["program"],
                     "chunk_index": c["chunk_index"],
+                    "page": c["page"],
                 }
                 for c in batch
             ],

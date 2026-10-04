@@ -13,7 +13,6 @@ import chromadb
 
 import config
 import llm
-from student_profile import is_empty, profile_to_query, profile_to_text
 
 # Fraza me të cilën asistenti fillon kur nuk e gjen informacionin.
 # evaluate.py e përdor për të numëruar automatikisht refuzimet.
@@ -30,18 +29,6 @@ Rregullat:
 5. Përgjigju në shqip, shkurt dhe qartë. Për kredite ECTS, vit dhe semestër, përdor vlerat saktësisht siç shfaqen në fragmente.
 6. Përjashtim nga rregulli 4: nëse mesazhi është vetëm përshëndetje ose bisedë e shkurtër (p.sh. "përshëndetje", "si je", "faleminderit"), mos përdor frazën e refuzimit. Përgjigju shkurt dhe miqësisht dhe thuaji se mund ta ndihmosh me pyetje rreth programeve të studimit të UET-së, si profilet, lëndët, kreditet ECTS dhe mundësitë e punësimit. Pyetjet faktike që nuk gjenden në fragmente vazhdojnë të marrin përgjigjen e refuzimit.
 7. Nëse mesazhi përmban "Profili i studentit", përdore për të personalizuar përgjigjen: rendit sipas rëndësisë programet dhe lëndët që i përshtaten interesit, nivelit, eksperiencës, objektivit dhe preferencës së tij. Profili nuk është burim fakti: emrat e programeve, lëndët, kreditet ECTS dhe mundësitë e punësimit merren vetëm nga fragmentet. Nëse asnjë program nuk i përshtatet qartë profilit, thuaje hapur dhe trego programin më të afërt që gjendet në fragmente."""
-
-PATH_INSTRUCTION = """Detyra: përgatit "Rrugën akademike të sugjeruar" për këtë student, duke u bazuar në profilin e tij dhe vetëm në fragmentet e dokumenteve. Përdor saktësisht këtë format:
-
-**Rruga akademike e sugjeruar**
-1. **Programi:** programi më i përshtatshëm dhe një fjali pse i përshtatet profilit
-2. **Lënda kyçe 1:** emri, viti/semestri dhe ECTS siç shfaqen në fragmente
-3. **Lënda kyçe 2:** po ashtu
-4. **Specializimi ose profili:** nëse fragmentet përmendin profile ose drejtime, trego atë më të përshtatshmin; përndryshe shkruaj "Nuk përmendet në dokumente"
-5. **Mundësi karriere:** vetëm ato që përmenden te fragmentet për atë program
-
-Në fund shto një pasazh të shkurtër "Alternativa" me një program tjetër që i afrohet profilit, nëse ka. Mos shpik lëndë ose programe që nuk janë te fragmentet."""
-
 
 # Fraza hapëse dhe bisede e shkurtër (pa theksa, të vogla). Për to nuk kërkohet në
 # dokumente dhe nuk shfaqen burime.
@@ -108,11 +95,13 @@ class RagAssistant:
             include=["documents", "metadatas", "distances"],
         )
         chunks = []
-        for text, meta, distance in zip(
-            result["documents"][0], result["metadatas"][0], result["distances"][0]
+        for chunk_id, text, meta, distance in zip(
+            result["ids"][0], result["documents"][0], result["metadatas"][0], result["distances"][0]
         ):
             chunks.append(
                 {
+                    "id": chunk_id,
+                    "page": meta.get("page") or None,
                     "text": text,
                     "program": meta["program"],
                     "source": meta["source"],
@@ -121,45 +110,43 @@ class RagAssistant:
             )
         return chunks
 
+    def retrieve_multi(self, queries: list[str], k: int = config.TOP_K, limit: int = 12) -> list[dict]:
+        """Kërkon për disa pyetje dhe i bashkon segmentet pa dublikatë.
+
+        Merr radhazi nga lista e secilës pyetje (round-robin), që krahasimi i dy
+        programeve të marrë segmente nga të dyja, jo vetëm nga më i ngjashmi.
+        """
+        per_query = [self.retrieve(q, k) for q in queries if q.strip()]
+        merged, seen = [], set()
+        for rank in range(k):
+            for results in per_query:
+                if rank < len(results) and results[rank]["id"] not in seen:
+                    seen.add(results[rank]["id"])
+                    merged.append(results[rank])
+        return merged[:limit]
+
     @staticmethod
     def _build_context(chunks: list[dict]) -> str:
         blocks = []
         for number, chunk in enumerate(chunks, start=1):
-            blocks.append(f"[Fragmenti {number} | Dokumenti: {chunk['source']}]\n{chunk['text']}")
+            page = f" | Faqja: {chunk['page']}" if chunk.get("page") else ""
+            blocks.append(f"[Fragmenti {number} | Dokumenti: {chunk['source']}{page}]\n{chunk['text']}")
         return "\n\n---\n\n".join(blocks)
 
-    def answer(
-        self,
-        question: str,
-        k: int = config.TOP_K,
-        profile: dict | None = None,
-        path_mode: bool = False,
-    ) -> dict:
-        """Përgjigjet një pyetjeje. Kthen përgjigjen, burimet dhe kohët e matura.
-
-        profile: profili i studentit (opsional), përdoret për kërkim dhe për prompt.
-        path_mode: kërkon formatin "Rruga akademike e sugjeruar" (kërkon profil).
-        """
+    def answer(self, question: str, k: int = config.TOP_K) -> dict:
+        """Përgjigjet një pyetjeje. Kthen përgjigjen, burimet dhe kohët e matura."""
         started = time.perf_counter()
-        small_talk = is_small_talk(question) and not path_mode
-        use_profile = not small_talk and not is_empty(profile)
-        search_text = question
-        if use_profile:
-            search_text = f"{question}. {profile_to_query(profile)}"
-        if path_mode:
-            k = max(k, 8)
-        chunks = [] if small_talk else self.retrieve(search_text, k)
+        small_talk = is_small_talk(question)
+        chunks = [] if small_talk else self.retrieve(question, k)
         retrieval_done = time.perf_counter()
 
         if small_talk:
             user_prompt = f"Mesazhi i studentit (bisedë e shkurtër, pa fragmente): {question}"
         else:
-            user_prompt = f"Fragmentet e dokumenteve:\n\n{self._build_context(chunks)}\n\n"
-            if use_profile:
-                user_prompt += f"Profili i studentit:\n{profile_to_text(profile)}\n\n"
-            if path_mode:
-                user_prompt += f"{PATH_INSTRUCTION}\n\n"
-            user_prompt += f"Pyetja e studentit: {question}"
+            user_prompt = (
+                f"Fragmentet e dokumenteve:\n\n{self._build_context(chunks)}\n\n"
+                f"Pyetja e studentit: {question}"
+            )
         text = llm.chat_completion(SYSTEM_PROMPT, user_prompt)
         finished = time.perf_counter()
 

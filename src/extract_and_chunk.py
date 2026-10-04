@@ -61,6 +61,14 @@ def extract_text_from_pdf(pdf_path: Path) -> str:
     return "\n".join(pages)
 
 
+def extract_pages(path: Path) -> list[tuple[int, str]]:
+    """Kthen [(numri i faqes, teksti)]. Për .txt kthen një element me faqe 0 (pa faqe)."""
+    if path.suffix.lower() == ".txt":
+        return [(0, path.read_text(encoding="utf-8"))]
+    reader = PdfReader(str(path))
+    return [(number, page.extract_text() or "") for number, page in enumerate(reader.pages, start=1)]
+
+
 def extract_text(path: Path) -> str:
     """Lexon tekstin nga një PDF ose nga një skedar .txt (UTF-8)."""
     if path.suffix.lower() == ".txt":
@@ -135,19 +143,22 @@ def load_and_chunk_all_pdfs(data_dir: Path = DATA_DIR) -> list[dict]:
     )
     for path in files:
         program = program_from_filename(path.name)
-        text = clean_text(extract_text(path))
-        pieces = chunk_text(text)
-        for index, piece in enumerate(pieces):
-            all_chunks.append(
-                {
-                    "id": f"{path.stem}_{index:03d}",
-                    "text": f"Programi: {program}\n{piece}",
-                    "source": path.name,
-                    "program": program,
-                    "chunk_index": index,
-                }
-            )
-        print(f"  {path.name}: {len(pieces)} segmente  ({program})")
+        # Segmentet ndërtohen faqe për faqe, që çdo segment të ketë numrin e saktë të faqes.
+        index = 0
+        for page_number, page_text in extract_pages(path):
+            for piece in chunk_text(clean_text(page_text)):
+                all_chunks.append(
+                    {
+                        "id": f"{path.stem}_{index:03d}",
+                        "text": f"Programi: {program}\n{piece}",
+                        "source": path.name,
+                        "program": program,
+                        "chunk_index": index,
+                        "page": page_number,
+                    }
+                )
+                index += 1
+        print(f"  {path.name}: {index} segmente  ({program})")
     return all_chunks
 
 

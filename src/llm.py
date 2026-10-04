@@ -43,3 +43,17 @@ def chat_completion(system_prompt: str, user_prompt: str) -> str:
         ],
     )
     return (response.choices[0].message.content or "").strip()
+
+
+def chat_json(system_prompt: str, user_prompt: str) -> str:
+    """Si chat_completion, por kërkon që modeli të kthejë një objekt JSON."""
+    response = _client().chat.completions.create(
+        model=config.CHAT_MODEL,
+        temperature=0,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    return (response.choices[0].message.content or "").strip()

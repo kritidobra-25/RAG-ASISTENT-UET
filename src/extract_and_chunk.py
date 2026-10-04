@@ -21,9 +21,14 @@ from pypdf import PdfReader
 from config import CHUNK_OVERLAP, CHUNK_SIZE, DATA_DIR
 
 # Emrat e programeve, njohur nga fjalë kyçe në emrin e skedarit.
-# Rendi ka rëndësi: "informatike-e-aplikuar" kontrollohet para "informatike",
+# Rendi ka rëndësi: rregullat specifike (MP/MSH) para atyre të përgjithshme,
+# "informatike-e-aplikuar" kontrollohet para "informatike",
 # dhe "informatike" para "teknologji".
 PROGRAM_RULES = [
+    ("mp-teknologji-informacioni-e-aplikuar", "Master Profesional në Teknologji Informacioni e Aplikuar në Financë"),
+    ("msh-finance", "Master i Shkencave në Financë"),
+    ("msh-informatike-ekonomike", "Master i Shkencave në Informatikë Ekonomike"),
+    ("msh-administrim", "Master i Shkencave në Administrim Biznesi"),
     ("finance", "Master Profesional në Financë"),
     ("menaxhim", "Master Profesional në Menaxhim Biznesi"),
     ("informatike-e-aplikuar", "Master Profesional në Informatikë e Aplikuar"),

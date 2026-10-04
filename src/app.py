@@ -23,7 +23,7 @@ EXAMPLE_QUESTIONS = [
     "Sa është tarifa vjetore e programit?",
 ]
 
-st.set_page_config(page_title="Asistenti i UET", layout="centered")
+st.set_page_config(page_title="UETassist", layout="centered")
 
 
 @st.cache_resource(show_spinner="Duke ngarkuar bazën e njohurive...")
@@ -64,7 +64,7 @@ with st.sidebar:
         st.rerun()
 
 # ---------- Biseda ----------
-st.title("Asistenti i UET")
+st.title("UETassist")
 st.caption(
     "Përgjigjet vijnë vetëm nga dokumentet zyrtare të ngarkuara. Për vendime të "
     "rëndësishme, konfirmo me administratën e UET-së. Mos shkruaj të dhëna personale."

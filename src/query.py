@@ -42,7 +42,7 @@ def main() -> None:
             print_result(assistant.answer(" ".join(sys.argv[1:])))
             return
 
-        print("Asistenti i UET. Shkruaj pyetjen tënde ose 'dil' për të mbyllur.")
+        print("UETassist. Shkruaj pyetjen tënde ose 'dil' për të mbyllur.")
         while True:
             question = input("\nPyetja: ").strip()
             if question.lower() in {"dil", "exit", "quit"}:

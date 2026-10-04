@@ -1,33 +1,17 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
 
 :root {
-    --bg: #F8FAFC;
-    --bot-bubble: #FFFFFF;
-    --user-bubble: #0284C7;
-    --user-text: #FFFFFF;
-    --text: #0F172A;
-    --accent: #E0F2FE;
-    --accent-text: #0369A1;
-    --border: #E2E8F0;
-    --button: #0284C7;
-    --button-hover: #0369A1;
-    --button-text: #FFFFFF;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #0F172A;
-        --bot-bubble: #1E293B;
-        --user-bubble: #38BDF8;
-        --user-text: #0F172A;
-        --text: #F1F5F9;
-        --accent: #0369A1;
-        --accent-text: #F1F5F9;
-        --border: #334155;
-        --button: #38BDF8;
-        --button-hover: #7DD3FC;
-        --button-text: #0F172A;
-    }
+    --bg: #0F2537;
+    --bot-bubble: #1B3A52;
+    --user-bubble: #38BDF8;
+    --user-text: #0F2537;
+    --text: #FFFFFF;
+    --accent: #0369A1;
+    --accent-text: #FFFFFF;
+    --border: #2F5470;
+    --button: #38BDF8;
+    --button-hover: #7DD3FC;
+    --button-text: #0F2537;
 }
 
 html, body, [class*="st-"], button, input, textarea {
@@ -75,7 +59,7 @@ li {
 }
 
 [data-testid="stSidebar"] {
-    background: var(--bot-bubble);
+    background: #0A1A28;
     border-right: 1px solid var(--border);
 }
 
@@ -123,4 +107,14 @@ li {
     border-radius: 999px;
     background: var(--accent);
     color: var(--accent-text);
+}
+
+/* Teksti i bardhë për elementet e tjera */
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] *,
+[data-testid="stExpander"] summary, [data-testid="stExpander"] summary * {
+    color: var(--text);
+}
+
+[data-testid="stBottom"], [data-testid="stBottom"] > div {
+    background: var(--bg);
 }

@@ -27,29 +27,8 @@ LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "uet_logo.png"
 
 st.set_page_config(page_title="UETassist", page_icon=str(LOGO_PATH), layout="centered")
 
-NAVY = "#0F2537"
-OFF_WHITE = "#F8FAFC"
-ACCENT = "#D97706"
-
 st.markdown(
-    f"""
-    <style>
-    [data-testid="stHeader"] {{ background: {OFF_WHITE}; }}
-    h1 {{ color: {NAVY}; border-bottom: 3px solid {ACCENT}; padding-bottom: .3rem; }}
-    [data-testid="stSidebar"] {{ background: {NAVY}; }}
-    [data-testid="stSidebar"] *:not(button):not(button *):not(code) {{ color: {OFF_WHITE}; }}
-    [data-testid="stSidebar"] [data-testid="stImage"] img {{
-        background: #FFFFFF; border-radius: 12px; padding: 6px;
-    }}
-    .stButton > button {{
-        background: {ACCENT}; color: #FFFFFF; border: none; border-radius: 8px;
-    }}
-    .stButton > button:hover {{ background: #B45309; color: #FFFFFF; }}
-    [data-testid="stChatMessage"] {{
-        background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
-    }}
-    </style>
-    """,
+    f"<style>{(Path(__file__).resolve().parent / 'style.css').read_text(encoding='utf-8')}</style>",
     unsafe_allow_html=True,
 )
 
@@ -107,8 +86,10 @@ if "messages" not in st.session_state:
 
 def show_sources(sources: list[dict], chunks: list[dict]) -> None:
     with st.expander("Burimet e përdorura"):
+        badges = "".join(f'<span class="citation">{source["program"]}</span>' for source in sources)
+        st.markdown(badges, unsafe_allow_html=True)
         for source in sources:
-            st.write(f"**{source['program']}**  \n`{source['source']}`")
+            st.caption(source["source"])
         st.divider()
         for number, chunk in enumerate(chunks, start=1):
             st.caption(f"Fragmenti {number} (largësia {chunk['distance']:.3f})")

@@ -1,0 +1,126 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+
+:root {
+    --bg: #F8FAFC;
+    --bot-bubble: #FFFFFF;
+    --user-bubble: #0284C7;
+    --user-text: #FFFFFF;
+    --text: #0F172A;
+    --accent: #E0F2FE;
+    --accent-text: #0369A1;
+    --border: #E2E8F0;
+    --button: #0284C7;
+    --button-hover: #0369A1;
+    --button-text: #FFFFFF;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0F172A;
+        --bot-bubble: #1E293B;
+        --user-bubble: #38BDF8;
+        --user-text: #0F172A;
+        --text: #F1F5F9;
+        --accent: #0369A1;
+        --accent-text: #F1F5F9;
+        --border: #334155;
+        --button: #38BDF8;
+        --button-hover: #7DD3FC;
+        --button-text: #0F172A;
+    }
+}
+
+html, body, [class*="st-"], button, input, textarea {
+    font-family: "Inter", sans-serif;
+}
+
+[data-testid="stApp"], [data-testid="stHeader"] {
+    background: var(--bg);
+    color: var(--text);
+}
+
+[data-testid="stAppViewContainer"] p,
+[data-testid="stAppViewContainer"] li,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+h1 {
+    color: var(--text);
+    border-bottom: 3px solid var(--user-bubble);
+    padding-bottom: .3rem;
+}
+
+h2, h3,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stChatMessage"] h1,
+[data-testid="stChatMessage"] h2,
+[data-testid="stChatMessage"] h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+ul {
+    list-style: disc;
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 6px;
+}
+
+[data-testid="stSidebar"] {
+    background: var(--bot-bubble);
+    border-right: 1px solid var(--border);
+}
+
+[data-testid="stSidebar"] [data-testid="stImage"] img {
+    border-radius: 12px;
+}
+
+/* Fushat e bisedës */
+[data-testid="stChatMessage"] {
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+    background: var(--user-bubble);
+    border-color: var(--user-bubble);
+}
+
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) p,
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) li {
+    color: var(--user-text);
+}
+
+/* Butonat */
+.stButton > button {
+    background: var(--button);
+    color: var(--button-text);
+    border: none;
+    border-radius: 8px;
+}
+
+.stButton > button:hover {
+    background: var(--button-hover);
+    color: var(--button-text);
+}
+
+/* Citimet */
+.citation {
+    display: inline-block;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 2px 10px;
+    margin: 0 6px 6px 0;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-text);
+}

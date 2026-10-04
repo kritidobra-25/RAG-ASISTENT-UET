@@ -61,7 +61,7 @@ with st.sidebar:
             st.caption("Opsionale: Mund ta plotësoni ose ndryshoni profilin manualisht.")
             background = st.text_input("Backgroundi akademik", profile["academic_background"], placeholder="p.sh. Bachelor në Administrim Biznesi")
             goal = st.text_input("Karriera e dëshiruar", profile["career_goal"], placeholder="p.sh. Data Engineer")
-            interests = st.text_input("Fusha e interesit (psh: IT, Finance, Biznes)", ", ".join(profile["interests"]))
+            interests = st.text_input("Fusha e interesit", ", ".join(profile["interests"]), placeholder="psh: IT, Finance, Biznes")
             skills = st.text_input("Aftësi teknike", ", ".join(profile["technical_skills"]), placeholder="p.sh. SQL, Python")
             program = st.selectbox(
                 "Programi i dëshiruar",

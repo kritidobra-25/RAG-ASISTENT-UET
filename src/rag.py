@@ -1,0 +1,113 @@
+"""
+Logjika kryesore e asistentit (Faza B e arkitekturës):
+pyetje -> embedding -> kërkim në ChromaDB -> prompt me kontekst -> përgjigje.
+
+Përdoret njësoj nga query.py (terminali), app.py (ndërfaqja) dhe evaluate.py.
+"""
+
+import time
+
+import chromadb
+
+import config
+import llm
+
+# Fraza me të cilën asistenti fillon kur nuk e gjen informacionin.
+# evaluate.py e përdor për të numëruar automatikisht refuzimet.
+REFUSAL_PREFIX = "Nuk e gjej këtë informacion në dokumentet e disponueshme."
+
+SYSTEM_PROMPT = f"""Je asistenti inteligjent i Universitetit Europian të Tiranës (UET) për studentët aktualë dhe kandidatët e mundshëm.
+Përgjigju VETËM duke u bazuar në fragmentet e dokumenteve zyrtare që jepen në mesazhin e përdoruesit.
+
+Rregullat:
+1. Mos përdor njohuri nga jashtë fragmenteve dhe mos shpik emra, numra, data apo kredite.
+2. Çdo fragment fillon me emrin e programit. Nëse pyetja përmend një program, përdor vetëm fragmentet e atij programi.
+3. Nëse pyetja nuk e specifikon programin dhe informacioni ndryshon mes programeve, trego përgjigjen për secilin program veç e veç.
+4. Nëse informacioni nuk gjendet në fragmente, fillo përgjigjen saktësisht me: "{REFUSAL_PREFIX}" dhe këshillo studentin të kontaktojë administratën e UET-së.
+5. Përgjigju në shqip, shkurt dhe qartë. Për kredite ECTS, vit dhe semestër, përdor vlerat saktësisht siç shfaqen në fragmente.
+6. Përjashtim nga rregulli 4: nëse mesazhi është vetëm përshëndetje ose bisedë e shkurtër (p.sh. "përshëndetje", "si je", "faleminderit"), mos përdor frazën e refuzimit. Përgjigju shkurt dhe miqësisht dhe thuaji se mund ta ndihmosh me pyetje rreth programeve të studimit të UET-së, si profilet, lëndët, kreditet ECTS dhe mundësitë e punësimit. Pyetjet faktike që nuk gjenden në fragmente vazhdojnë të marrin përgjigjen e refuzimit."""
+class KnowledgeBaseMissingError(RuntimeError):
+    pass
+
+
+class RagAssistant:
+    def __init__(self) -> None:
+        client = chromadb.PersistentClient(path=str(config.DB_DIR))
+        try:
+            self.collection = client.get_collection(config.COLLECTION_NAME)
+        except Exception as error:
+            raise KnowledgeBaseMissingError(
+                "Baza e njohurive nuk ekziston ende. "
+                "Ekzekuto fillimisht: python src/build_index.py"
+            ) from error
+        if self.collection.count() == 0:
+            raise KnowledgeBaseMissingError(
+                "Baza e njohurive është bosh. Ekzekuto: python src/build_index.py"
+            )
+
+    def stats(self) -> dict:
+        """Numri i segmenteve dhe lista e programeve/dokumenteve në bazë."""
+        data = self.collection.get(include=["metadatas"])
+        programs = sorted({m["program"] for m in data["metadatas"]})
+        return {"segments": self.collection.count(), "programs": programs}
+
+    def retrieve(self, question: str, k: int = config.TOP_K) -> list[dict]:
+        """Kthen k segmentet më të ngjashme semantikisht me pyetjen."""
+        vector = llm.embed_texts([question])[0]
+        result = self.collection.query(
+            query_embeddings=[vector],
+            n_results=k,
+            include=["documents", "metadatas", "distances"],
+        )
+        chunks = []
+        for text, meta, distance in zip(
+            result["documents"][0], result["metadatas"][0], result["distances"][0]
+        ):
+            chunks.append(
+                {
+                    "text": text,
+                    "program": meta["program"],
+                    "source": meta["source"],
+                    "distance": float(distance),
+                }
+            )
+        return chunks
+
+    @staticmethod
+    def _build_context(chunks: list[dict]) -> str:
+        blocks = []
+        for number, chunk in enumerate(chunks, start=1):
+            blocks.append(f"[Fragmenti {number} | Dokumenti: {chunk['source']}]\n{chunk['text']}")
+        return "\n\n---\n\n".join(blocks)
+
+    def answer(self, question: str, k: int = config.TOP_K) -> dict:
+        """Përgjigjet një pyetjeje. Kthen përgjigjen, burimet dhe kohët e matura."""
+        started = time.perf_counter()
+        chunks = self.retrieve(question, k)
+        retrieval_done = time.perf_counter()
+
+        user_prompt = (
+            f"Fragmentet e dokumenteve:\n\n{self._build_context(chunks)}\n\n"
+            f"Pyetja e studentit: {question}"
+        )
+        text = llm.chat_completion(SYSTEM_PROMPT, user_prompt)
+        finished = time.perf_counter()
+
+        sources = []
+        seen = set()
+        for chunk in chunks:
+            key = (chunk["program"], chunk["source"])
+            if key not in seen:
+                seen.add(key)
+                sources.append({"program": chunk["program"], "source": chunk["source"]})
+
+        return {
+            "question": question,
+            "answer": text,
+            "refused": text.strip().startswith(REFUSAL_PREFIX),
+            "sources": sources,
+            "chunks": chunks,
+            "retrieval_seconds": retrieval_done - started,
+            "generation_seconds": finished - retrieval_done,
+            "total_seconds": finished - started,
+        }

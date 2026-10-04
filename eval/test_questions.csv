@@ -1,0 +1,26 @@
+id,kategoria,pyetja,pergjigja_e_pritur,brenda_korpusit
+1,programe_profile,Cilat janë profilet e Master Shkencor në Inxhinieri Ndërtimi?,Inxhinieri Strukturash dhe Infrastrukturë Transporti,po
+2,programe_profile,Cilat janë profilet e Master Shkencor në Inxhinieri Mekanike?,Energjitikë dhe Infrastrukturë Transporti,po
+3,programe_profile,Cilat janë profilet e Master Shkencor në Inxhinieri Elektrike?,Energjetikë dhe Automatizim-Industri,po
+4,programe_profile,Cilat janë profilet e Master Shkencor në Teknologji Informacioni?,Zhvillim Softweresh; IT e biznesit; Menaxhim dhe Vlerësim Projektesh; Inovacion,po
+5,programe_profile,Cilat janë profilet e Master Shkencor në Inxhinieri Informatike?,Inxhinieri Softwere-sh; Siguria e sistemeve të informacionit; Menaxhim të dhënash; Dizenjim dhe zhvillim aplikimesh,po
+6,lende_kredite,Sa ECTS ka lënda Inteligjenca artificiale në Master Inxhinieri Informatike?,6 ECTS; viti II; semestri 1,po
+7,lende_kredite,Në cilin vit dhe semestër jepet Metoda kërkimi në inxhinieri te Master Inxhinieri Ndërtimi?,Viti II; semestri 1 (6 ECTS),po
+8,lende_kredite,Në cilin vit dhe semestër jepet Metoda kërkimi në inxhinieri te Master Inxhinieri Informatike?,Viti I; semestri 1 (6 ECTS),po
+9,lende_kredite,Sa ECTS ka Punimi i diplomës te Master Inxhinieri Elektrike?,24 ECTS,po
+10,lende_kredite,Sa ECTS ka Punimi i diplomës te Master Inxhinieri Ndërtimi?,28 ECTS,po
+11,lende_kredite,Sa ECTS ka Mekanika e Dherave Shkembit dhe Themeleve në Inxhinieri Ndërtimi?,10 ECTS; viti I; semestri 1,po
+12,lende_kredite,Sa ECTS ka lënda Zhvillim Webi: aplikime dhe programim në Teknologji Informacioni?,10 ECTS; viti II; semestri 2,po
+13,lende_kredite,Sa ECTS ka Praktika profesionale te Master Inxhinieri Mekanike?,12 ECTS,po
+14,lende_kredite,A është Inteligjenca artificiale lëndë profili te Master Teknologji Informacioni?,Po; te profili Zhvillim Softweresh; 6 ECTS; viti II; semestri 1,po
+15,lende_kredite,Cilat lëndë ka profili Siguria e sistemeve të informacionit në Inxhinieri Informatike?,Kontrolli dhe auditimi i sigurisë në rrjetat kompjuterike; Menaxhimi i riskut në IT; Kriptografia dhe Ethical Hacking,po
+16,lende_kredite,Sa ECTS ka Menaxhimi i Rrjetave Kompjuterike në Inxhinieri Informatike?,10 ECTS; viti I; semestri 2,po
+17,punesim,Cilat janë mundësitë e punësimit pas Master në Inxhinieri Ndërtimi?,Inxhinier projektues; ekspert ndërtimi; inspektor ndërtimi; inxhinier strukturash; inxhinier i infrastrukturës së transportit,po
+18,punesim,Çfarë profesionesh mund të ushtrojë një i diplomuar në Master Inxhinieri Mekanike?,Menaxher strategjik projektesh industriale; inxhinier i sistemeve industriale; konsulent ndërkombëtar; inxhinier për parqe energjetike,po
+19,punesim,Në cilat sektorë mund të punësohet një inxhinier elektrik me Master Shkencor?,Prodhim dhe shpërndarje energjie; industri mekanike dhe transporti; prodhim dhe mirëmbajtje; administratë publike; këshillim,po
+20,punesim,A mund të pajiset me licencë një i diplomuar në Master Inxhinieri Ndërtimi?,Po; sipas kuadrit ligjor në fuqi,po
+21,jashte_korpusit,Sa është tarifa vjetore e programit Master në Teknologji Informacioni?,Nuk ka përgjigje në dokumente,jo
+22,jashte_korpusit,Deri kur është afati i aplikimit për vitin akademik të ri?,Nuk ka përgjigje në dokumente,jo
+23,jashte_korpusit,Cili është orari i mësimit për semestrin e parë?,Nuk ka përgjigje në dokumente,jo
+24,jashte_korpusit,Si mund të kontaktoj koordinatorin e programit?,Nuk ka përgjigje në dokumente,jo
+25,jashte_korpusit,Cilat janë kriteret e pranimit në Bachelor në Drejtësi?,Nuk ka përgjigje në dokumente,jo

@@ -12,7 +12,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import streamlit as st  # noqa: E402
 
-import config  # noqa: E402
 import llm  # noqa: E402
 from student_profile import is_empty, new_profile, profile_to_text  # noqa: E402
 from advisor import Advisor  # noqa: E402
@@ -50,18 +49,6 @@ except KnowledgeBaseMissingError as error:
 # ---------- Shiriti anësor ----------
 with st.sidebar:
     st.image(str(LOGO_PATH), use_container_width=True)
-    st.header("Rreth asistentit")
-    st.write(
-        "Asistenti u përgjigjet pyetjeve të studentëve aktualë dhe kandidatëve "
-        "duke u bazuar vetëm në dokumentet zyrtare të UET-së."
-    )
-    stats = assistant.stats()
-    st.write(f"**Baza e njohurive:** {stats['segments']} segmente nga {len(stats['programs'])} dokumente ose programe.")
-    with st.expander("Programet dhe dokumentet në bazë"):
-        for program in stats["programs"]:
-            st.write(f"- {program}")
-    st.caption(f"Modeli: {config.CHAT_MODEL} | Embeddings: {config.EMBEDDING_MODEL}")
-
     with st.expander("Profili im", expanded=not is_empty(st.session_state.get("profile"))):
         st.caption(
             "Profili plotësohet vetë nga biseda dhe përditësohet teksa flet. Ruhet vetëm "
@@ -105,8 +92,8 @@ logo_col, title_col = st.columns([1, 6], vertical_alignment="center")
 logo_col.image(str(LOGO_PATH), width=72)
 title_col.title("UETassist")
 st.caption(
-    "Përgjigjet vijnë vetëm nga dokumentet zyrtare të ngarkuara. Për vendime të "
-    "rëndësishme, konfirmo me administratën e UET-së. Mos shkruaj të dhëna personale."
+    "Përshëndetje! Jam asistenti virtual i UET. Jam këtu për t’ju ndihmuar me çdo "
+    "pyetje rreth studimeve. Çfarë dëshironi të dini?"
 )
 
 if "messages" not in st.session_state:
@@ -144,7 +131,7 @@ for message in st.session_state["messages"]:
         if message["role"] == "assistant" and message.get("sources"):
             show_sources(message["sources"], message["chunks"])
 
-typed_question = st.chat_input("Shkruaj pyetjen tënde për UET-në")
+typed_question = st.chat_input("Shkruaj pyetjen tënde për UETAssist")
 question = typed_question or st.session_state.pop("pending_question", None)
 
 if question:

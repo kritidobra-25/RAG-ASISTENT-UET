@@ -23,7 +23,35 @@ EXAMPLE_QUESTIONS = [
     "Sa është tarifa vjetore e programit?",
 ]
 
-st.set_page_config(page_title="UETassist", layout="centered")
+LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "uet_logo.png"
+
+st.set_page_config(page_title="UETassist", page_icon=str(LOGO_PATH), layout="centered")
+
+NAVY = "#0F2537"
+OFF_WHITE = "#F8FAFC"
+ACCENT = "#D97706"
+
+st.markdown(
+    f"""
+    <style>
+    [data-testid="stHeader"] {{ background: {OFF_WHITE}; }}
+    h1 {{ color: {NAVY}; border-bottom: 3px solid {ACCENT}; padding-bottom: .3rem; }}
+    [data-testid="stSidebar"] {{ background: {NAVY}; }}
+    [data-testid="stSidebar"] *:not(button):not(button *):not(code) {{ color: {OFF_WHITE}; }}
+    [data-testid="stSidebar"] [data-testid="stImage"] img {{
+        background: #FFFFFF; border-radius: 12px; padding: 6px;
+    }}
+    .stButton > button {{
+        background: {ACCENT}; color: #FFFFFF; border: none; border-radius: 8px;
+    }}
+    .stButton > button:hover {{ background: #B45309; color: #FFFFFF; }}
+    [data-testid="stChatMessage"] {{
+        background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 @st.cache_resource(show_spinner="Duke ngarkuar bazën e njohurive...")
@@ -42,6 +70,7 @@ except KnowledgeBaseMissingError as error:
 
 # ---------- Shiriti anësor ----------
 with st.sidebar:
+    st.image(str(LOGO_PATH), use_container_width=True)
     st.header("Rreth asistentit")
     st.write(
         "Asistenti u përgjigjet pyetjeve të studentëve aktualë dhe kandidatëve "
@@ -64,7 +93,9 @@ with st.sidebar:
         st.rerun()
 
 # ---------- Biseda ----------
-st.title("UETassist")
+logo_col, title_col = st.columns([1, 6], vertical_alignment="center")
+logo_col.image(str(LOGO_PATH), width=72)
+title_col.title("UETassist")
 st.caption(
     "Përgjigjet vijnë vetëm nga dokumentet zyrtare të ngarkuara. Për vendime të "
     "rëndësishme, konfirmo me administratën e UET-së. Mos shkruaj të dhëna personale."

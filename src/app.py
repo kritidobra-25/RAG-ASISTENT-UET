@@ -21,13 +21,6 @@ LEVEL_OPTIONS = ["", "Master Profesional", "Master i Shkencave", "Nuk e di ende"
 PREFERENCE_OPTIONS = ["", "Program teknik", "Program biznesi", "Të përzier / pa preferencë"]
 PATH_QUESTION = "Më sugjero rrugën akademike më të përshtatshme sipas profilit tim."
 
-EXAMPLE_QUESTIONS = [
-    "Cilat janë profilet e Master Shkencor në Inxhinieri Mekanike?",
-    "Sa ECTS ka lënda Inteligjenca artificiale në Inxhinieri Informatike?",
-    "Cilat janë mundësitë e punësimit pas Master në Inxhinieri Ndërtimi?",
-    "Sa është tarifa vjetore e programit?",
-]
-
 LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "uet_logo.png"
 
 st.set_page_config(page_title="UETassist", page_icon=str(LOGO_PATH), layout="centered")
@@ -82,11 +75,6 @@ with st.sidebar:
         if st.button("Gjenero rrugën akademike", use_container_width=True, disabled=is_empty(profile)):
             st.session_state["pending_question"] = PATH_QUESTION
             st.session_state["pending_path_mode"] = True
-
-    st.subheader("Pyetje shembull")
-    for example in EXAMPLE_QUESTIONS:
-        if st.button(example, use_container_width=True):
-            st.session_state["pending_question"] = example
 
     if st.button("Pastro bisedën", use_container_width=True, key="clear_sidebar"):
         st.session_state["messages"] = []

@@ -14,7 +14,12 @@ import streamlit as st  # noqa: E402
 
 import config  # noqa: E402
 import llm  # noqa: E402
+from student_profile import FIELDS, is_empty  # noqa: E402
 from rag import KnowledgeBaseMissingError, RagAssistant  # noqa: E402
+
+LEVEL_OPTIONS = ["", "Master Profesional", "Master i Shkencave", "Nuk e di ende"]
+PREFERENCE_OPTIONS = ["", "Program teknik", "Program biznesi", "Të përzier / pa preferencë"]
+PATH_QUESTION = "Më sugjero rrugën akademike më të përshtatshme sipas profilit tim."
 
 EXAMPLE_QUESTIONS = [
     "Cilat janë profilet e Master Shkencor në Inxhinieri Mekanike?",
@@ -62,6 +67,22 @@ with st.sidebar:
             st.write(f"- {program}")
     st.caption(f"Modeli: {config.CHAT_MODEL} | Embeddings: {config.EMBEDDING_MODEL}")
 
+    with st.expander("Profili im (opsional)"):
+        st.caption(
+            "Plotëso profilin që përgjigjet të përshtaten me ty. Ruhet vetëm në këtë "
+            "sesion. Mos shkruaj emër ose të dhëna personale."
+        )
+        profile = st.session_state.setdefault("profile", {})
+        profile["bachelor"] = st.text_input(FIELDS["bachelor"], profile.get("bachelor", ""), placeholder="p.sh. Administrim Biznesi")
+        profile["interest"] = st.text_input(FIELDS["interest"], profile.get("interest", ""), placeholder="p.sh. Data Engineering")
+        profile["level"] = st.selectbox(FIELDS["level"], LEVEL_OPTIONS, index=LEVEL_OPTIONS.index(profile.get("level", "")))
+        profile["experience"] = st.text_input(FIELDS["experience"], profile.get("experience", ""), placeholder="p.sh. SQL, Python")
+        profile["goal"] = st.text_input(FIELDS["goal"], profile.get("goal", ""), placeholder="p.sh. punësim në IT")
+        profile["preference"] = st.selectbox(FIELDS["preference"], PREFERENCE_OPTIONS, index=PREFERENCE_OPTIONS.index(profile.get("preference", "")))
+        if st.button("Gjenero rrugën akademike", use_container_width=True, disabled=is_empty(profile)):
+            st.session_state["pending_question"] = PATH_QUESTION
+            st.session_state["pending_path_mode"] = True
+
     st.subheader("Pyetje shembull")
     for example in EXAMPLE_QUESTIONS:
         if st.button(example, use_container_width=True):
@@ -104,6 +125,7 @@ for message in st.session_state["messages"]:
 
 typed_question = st.chat_input("Shkruaj pyetjen tënde për UET-në")
 question = typed_question or st.session_state.pop("pending_question", None)
+path_mode = bool(st.session_state.pop("pending_path_mode", False)) and not typed_question
 
 if question:
     st.session_state["messages"].append({"role": "user", "content": question})
@@ -113,7 +135,9 @@ if question:
     with st.chat_message("assistant"):
         try:
             with st.spinner("Duke kërkuar në dokumente..."):
-                result = assistant.answer(question)
+                result = assistant.answer(
+                    question, profile=st.session_state.get("profile"), path_mode=path_mode
+                )
         except llm.MissingApiKeyError as error:
             st.error(str(error))
         except Exception as error:  # gabime rrjeti, kuota, çelës i pavlefshëm

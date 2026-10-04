@@ -88,7 +88,7 @@ with st.sidebar:
         if st.button(example, use_container_width=True):
             st.session_state["pending_question"] = example
 
-    if st.button("Pastro bisedën", use_container_width=True):
+    if st.button("Pastro bisedën", use_container_width=True, key="clear_sidebar"):
         st.session_state["messages"] = []
         st.rerun()
 
@@ -103,6 +103,10 @@ st.caption(
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
+
+if st.session_state["messages"] and st.button("Pastro bisedën", key="clear_main"):
+    st.session_state["messages"] = []
+    st.rerun()
 
 
 def show_sources(sources: list[dict], chunks: list[dict]) -> None:

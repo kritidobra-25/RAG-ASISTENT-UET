@@ -11,6 +11,8 @@ Përdorimi:
 
 import json
 import re
+import unicodedata
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -35,6 +37,27 @@ _TOTAL = re.compile(r"^\s*TOTALI\s+(\d+)\s*$", re.IGNORECASE)
 _ELECTIVE_MARKER = re.compile(r"zgjedhje", re.IGNORECASE)
 _LOOKS_LIKE_ROW = re.compile(r"^\d+\s+(?:(?:II|I)\s+)?(?:1-2|1|2)\s+\S")
 UNKNOWN_CATEGORY = "?"
+_NOT_A_PROFILE_TITLE = re.compile(r"(?:^(?:profili|nr\.?|totali|master|msh|msc|mp)\b|ects|%|\d)", re.IGNORECASE)
+
+
+def _is_profile_title(line: str, category: str | None) -> bool:
+    """Titulli i një grupi lëndësh me zgjedhje (p.sh. 'IT e biznesit') brenda kategorisë C.
+
+    Njihet nga forma: tekst i shkurtër pa numra, jo me shkronja të mëdha, pas titullit C.
+    """
+    return (
+        category == "C"
+        and 3 <= len(line) <= 80
+        and not line.isupper()
+        and not _NOT_A_PROFILE_TITLE.search(line)
+    )
+
+
+def norm(text: str) -> str:
+    """Tekst i normalizuar për krahasim: shkronja të vogla, pa theksa, pa shenja."""
+    text = unicodedata.normalize("NFKD", text.lower())
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", text).split())
 
 
 def parse_pdf(path: Path) -> dict:
@@ -47,6 +70,7 @@ def parse_pdf(path: Path) -> dict:
     group = 0
     previous_nr = 0
     elective = False
+    profile_title = None
     program = program_from_filename(path.name)
 
     for page_number, page in enumerate(PdfReader(str(path)).pages, start=1):
@@ -61,7 +85,7 @@ def parse_pdf(path: Path) -> dict:
                 numbers = _STATED_ECTS.findall(match.group(2))
                 if numbers:
                     stated[category] = int(numbers[-1])
-                group, previous_nr, elective = 0, 0, False
+                group, previous_nr, elective, profile_title = 0, 0, False, None
                 continue
             if _TOTAL.match(line):
                 total = int(_TOTAL.match(line).group(1))
@@ -79,6 +103,9 @@ def parse_pdf(path: Path) -> dict:
                 if not row:
                     if _LOOKS_LIKE_ROW.match(line):
                         unparsed.append(f"f. {page_number}: {line}")
+                    elif _is_profile_title(line, category):
+                        profile_title = line
+                        group, previous_nr = group + 1, 0
                     continue
                 nr, semester, name, ects = row.groups()
                 year = 1
@@ -97,13 +124,15 @@ def parse_pdf(path: Path) -> dict:
                     "category_label": CATEGORIES[category],
                     "group": group,
                     "elective": elective and category in {"B", "C"},
+                    "profile": profile_title if category == "C" else None,
                     "year": year,
                     "semester": semester,  # "1", "2" ose "1-2" (brenda vitit)
                     "name": name.strip(),
                     "ects": int(ects),
                 }
             )
-    return {"courses": courses, "total_ects": total, "stated": stated, "unparsed": unparsed}
+    profiles = sorted({c["profile"] for c in courses if c["profile"]})
+    return {"courses": courses, "total_ects": total, "stated": stated, "unparsed": unparsed, "profiles": profiles}
 
 
 def build(data_dir: Path | None = None) -> dict:
@@ -121,6 +150,8 @@ def build(data_dir: Path | None = None) -> dict:
             for course in parsed["courses"]:
                 course["category"] = UNKNOWN_CATEGORY
                 course["category_label"] = "Kategoria e papërcaktuar"
+                course["profile"] = None
+            parsed["profiles"] = []
         result[program_from_filename(path.name)] = {"source": path.name, **parsed}
     return result
 
@@ -172,13 +203,74 @@ def years_for(curriculum: dict, program: str) -> list[int]:
     return sorted({c["year"] for c in courses}) or [1]
 
 
-def courses_for(curriculum: dict, program: str, year: int, semester: int) -> list[dict]:
-    """Lëndët e planit për vitin dhe semestrin (1 ose 2 brenda vitit). Lëndët '1-2' hyjnë te të dy."""
+def profiles_for(curriculum: dict, program: str) -> list[str]:
+    """Specializimet (grupet C me titull) që plani i këtij programi i lidh me lëndë."""
+    return curriculum.get(program, {}).get("profiles", [])
+
+
+def match_profile(curriculum: dict, program: str, specialization: str) -> str | None:
+    """Specializimi i dhënuar nga studenti, i përputhur me një titull nga plani (ose None)."""
+    wanted = norm(specialization or "")
+    if not wanted:
+        return None
+    for title in profiles_for(curriculum, program):
+        if norm(title) == wanted or wanted in norm(title) or norm(title) in wanted:
+            return title
+    return None
+
+
+def courses_for(curriculum: dict, program: str, year: int, semester: int, specialization: str = "") -> list[dict]:
+    """Lëndët e planit për vitin dhe semestrin (1 ose 2 brenda vitit). Lëndët '1-2' hyjnë te të dy.
+
+    Nëse programi ka specializime te plani, kthehen lëndët e përbashkëta dhe ato të
+    specializimit të zgjedhur. Pa specializim të njohur kthehen vetëm të përbashkëtat.
+    """
     courses = curriculum.get(program, {}).get("courses", [])
+    chosen = match_profile(curriculum, program, specialization)
     return [
         c for c in courses
-        if c["year"] == year and c["semester"] in (str(semester), "1-2")
+        if c["year"] == year
+        and c["semester"] in (str(semester), "1-2")
+        and (not c.get("profile") or c["profile"] == chosen)
     ]
+
+
+def best_match(names: list[str], text: str) -> str | None:
+    """Emri më i afërt nga lista me tekstin e shkruar (përafërsisht), ose None."""
+    wanted = norm(text or "")
+    if not wanted:
+        return None
+    best, best_score = None, 0.0
+    for original in names:
+        name = norm(original)
+        if name == wanted:
+            return original
+        score = 0.9 if (wanted in name or name in wanted) and min(len(wanted), len(name)) >= 6 else SequenceMatcher(None, wanted, name).ratio()
+        if score > best_score:
+            best, best_score = original, score
+    return best if best_score >= 0.72 else None
+
+
+def find_course(curriculum: dict, program: str, text: str) -> dict | None:
+    """Gjen një lëndë të programit nga emri i shkruar nga studenti (përafërsisht)."""
+    courses = curriculum.get(program, {}).get("courses", [])
+    name = best_match(sorted({c["name"] for c in courses}), text)
+    return next((c for c in courses if c["name"] == name), None) if name else None
+
+
+def canonical_course_name(curriculum: dict, text: str) -> str | None:
+    """Emri zyrtar i lëndës nga çdo program (p.sh. për emrat e skedarëve të materialeve)."""
+    return best_match(sorted({c["name"] for d in curriculum.values() for c in d["courses"]}), text)
+
+
+def course_facts(course: dict) -> str:
+    """Faktet zyrtare të një lënde nga plani, për prompt dhe për shfaqje."""
+    semester = "viti i plotë (semestri 1-2)" if course["semester"] == "1-2" else f"semestri {course['semester']}"
+    profile = f"; specializimi: {course['profile']}" if course.get("profile") else ""
+    return (
+        f"{course['name']}: {course['ects']} ECTS; viti {course['year']}, {semester}; "
+        f"{course['category_label'].lower()}{profile} [{course['program']}, f. {course['page']}]"
+    )
 
 
 def format_courses(courses: list[dict]) -> str:
@@ -191,7 +283,12 @@ def format_courses(courses: list[dict]) -> str:
             continue
         lines.append(f"{label}:")
         for c in subset:
-            note = " (me zgjedhje ose sipas profilit)" if c["category"] in {"B", "C"} and (c["elective"] or c["group"] > 0) else ""
+            if c.get("profile"):
+                note = f" (specializimi: {c['profile']})"
+            elif c["category"] in {"B", "C"} and (c["elective"] or c["group"] > 0):
+                note = " (me zgjedhje ose sipas profilit)"
+            else:
+                note = ""
             page = f", f. {c['page']}" if c.get("page") else ""
             lines.append(f"- {c['name']}, {c['ects']} ECTS{note} [{c['program']}{page}]")
     return "\n".join(lines)

@@ -16,6 +16,7 @@ load_dotenv(ROOT / ".env")
 
 # Dosjet
 DATA_DIR = ROOT / "data"          # këtu vendosen PDF-të e UET-së
+MATERIALS_DIR = DATA_DIR / "lendet"  # materialet e lëndëve (opsionale), shih data/lendet/README.md
 DB_DIR = ROOT / "chroma_db"       # krijohet vetë nga build_index.py
 EVAL_DIR = ROOT / "eval"          # pyetjet testuese dhe rezultatet
 

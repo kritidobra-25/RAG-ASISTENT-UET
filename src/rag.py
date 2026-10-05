@@ -25,8 +25,12 @@ _LABEL_BARE = re.compile(rf"\b{_LABEL}\s*(\d+)\b", re.IGNORECASE)
 
 
 def citation(chunk: dict) -> str:
-    """Citimi i lexueshëm i një segmenti: 'Emri i programit, f. 3' ose vetëm emri."""
-    return f"{chunk['program']}, f. {chunk['page']}" if chunk.get("page") else chunk["program"]
+    """Citimi i lexueshëm i një segmenti: 'Titulli, f. 3' ose vetëm titulli.
+
+    Titulli është emri i programit (dokumentet zyrtare) ose emri i skedarit (materialet e lëndëve).
+    """
+    title = chunk.get("title") or chunk["program"]
+    return f"{title}, f. {chunk['page']}" if chunk.get("page") else title
 
 
 def sanitize_labels(text: str, chunks: list[dict]) -> str:
@@ -44,6 +48,7 @@ def sanitize_labels(text: str, chunks: list[dict]) -> str:
     text = _LABEL_GROUP.sub(lambda m: replace(m, True), text)
     text = _LABEL_BARE.sub(lambda m: replace(m, False), text)
     text = re.sub(r"\b(?:retrieved chunks?|chunks?)\b\s*\d*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"[\[\(]?\s*(?:vector\s+)?(?:similarity|distance|score|largësia)\s*(?:score)?\s*[:=]?\s*\d*\.?\d+\s*[\]\)]?", "", text, flags=re.IGNORECASE)
     text = re.sub(r"\(\s*\)", "", text)
     return re.sub(r"[ \t]+([.,;])", r"\1", text)
 
@@ -118,14 +123,26 @@ class RagAssistant:
         programs = sorted({m["program"] for m in data["metadatas"]})
         return {"segments": self.collection.count(), "programs": programs}
 
-    def retrieve(self, question: str, k: int = config.TOP_K) -> list[dict]:
-        """Kthen k segmentet më të ngjashme semantikisht me pyetjen."""
+    def retrieve(self, question: str, k: int = config.TOP_K, where: dict | None = None) -> list[dict]:
+        """Kthen k segmentet më të ngjashme semantikisht me pyetjen.
+
+        where: filtër opsional mbi metadatat (p.sh. {"program": ...} ose {"course": ...}).
+        """
         vector = llm.embed_texts([question])[0]
-        result = self.collection.query(
-            query_embeddings=[vector],
-            n_results=k,
-            include=["documents", "metadatas", "distances"],
-        )
+        count = self.collection.count()
+        if count == 0:
+            return []
+        try:
+            result = self.collection.query(
+                query_embeddings=[vector],
+                n_results=min(k, count),
+                include=["documents", "metadatas", "distances"],
+                **({"where": where} if where else {}),
+            )
+        except Exception:
+            if not where:
+                raise
+            return []  # filtri nuk përputhet (p.sh. baza e vjetër pa fushën e re): asnjë rezultat
         chunks = []
         for chunk_id, text, meta, distance in zip(
             result["ids"][0], result["documents"][0], result["metadatas"][0], result["distances"][0]
@@ -134,6 +151,9 @@ class RagAssistant:
                 {
                     "id": chunk_id,
                     "page": meta.get("page") or None,
+                    "title": meta.get("title") or meta["program"],
+                    "doc_type": meta.get("doc_type", "program"),
+                    "course": meta.get("course", ""),
                     "text": text,
                     "program": meta["program"],
                     "source": meta["source"],
@@ -142,13 +162,13 @@ class RagAssistant:
             )
         return chunks
 
-    def retrieve_multi(self, queries: list[str], k: int = config.TOP_K, limit: int = 12) -> list[dict]:
+    def retrieve_multi(self, queries: list[str], k: int = config.TOP_K, limit: int = 12, where: dict | None = None) -> list[dict]:
         """Kërkon për disa pyetje dhe i bashkon segmentet pa dublikatë.
 
         Merr radhazi nga lista e secilës pyetje (round-robin), që krahasimi i dy
         programeve të marrë segmente nga të dyja, jo vetëm nga më i ngjashmi.
         """
-        per_query = [self.retrieve(q, k) for q in queries if q.strip()]
+        per_query = [self.retrieve(q, k, where) for q in queries if q.strip()]
         merged, seen = [], set()
         for rank in range(k):
             for results in per_query:
@@ -164,12 +184,12 @@ class RagAssistant:
             blocks.append(f"[Burimi: {citation(chunk)}]\n{chunk['text']}")
         return "\n\n---\n\n".join(blocks)
 
-    def answer(self, question: str, k: int = config.TOP_K, hint: str = "") -> dict:
+    def answer(self, question: str, k: int = config.TOP_K, hint: str = "", where: dict | None = None, extra: str = "") -> dict:
         """Përgjigjet një pyetjeje. Kthen përgjigjen, burimet dhe kohët e matura."""
         started = time.perf_counter()
         small_talk = is_small_talk(question)
         # hint (p.sh. programi i studentit) pasuron vetëm kërkimin, jo pyetjen te prompti.
-        chunks = [] if small_talk else self.retrieve(f"{question}. {hint}" if hint else question, k)
+        chunks = [] if small_talk else self.retrieve(f"{question}. {hint}" if hint else question, k, where)
         retrieval_done = time.perf_counter()
 
         if small_talk:
@@ -177,7 +197,8 @@ class RagAssistant:
         else:
             user_prompt = (
                 f"Fragmentet e dokumenteve:\n\n{self._build_context(chunks)}\n\n"
-                f"Pyetja e studentit: {question}"
+                + (f"{extra}\n\n" if extra else "")
+                + f"Pyetja e studentit: {question}"
             )
         text = sanitize_labels(llm.chat_completion(SYSTEM_PROMPT, user_prompt), chunks)
         finished = time.perf_counter()
@@ -185,9 +206,10 @@ class RagAssistant:
         sources = []
         by_key: dict[tuple[str, str], dict] = {}
         for chunk in chunks:
-            key = (chunk["program"], chunk["source"])
+            title = chunk.get("title") or chunk["program"]
+            key = (title, chunk["source"])
             if key not in by_key:
-                by_key[key] = {"program": chunk["program"], "source": chunk["source"], "pages": []}
+                by_key[key] = {"program": title, "source": chunk["source"], "pages": [], "doc_type": chunk.get("doc_type", "program")}
                 sources.append(by_key[key])
             if chunk.get("page") and chunk["page"] not in by_key[key]["pages"]:
                 by_key[key]["pages"].append(chunk["page"])

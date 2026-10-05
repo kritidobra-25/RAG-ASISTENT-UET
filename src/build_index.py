@@ -16,12 +16,15 @@ import chromadb
 
 import config
 import llm
-from extract_and_chunk import load_and_chunk_all_pdfs
+import curriculum
+from extract_and_chunk import load_and_chunk_all_pdfs, load_course_materials
 
 
 def build_index() -> int:
     print(f"Duke lexuar dokumentet nga: {config.DATA_DIR}")
     chunks = load_and_chunk_all_pdfs(config.DATA_DIR)
+    plan = curriculum.load() or curriculum.build()
+    chunks += load_course_materials(config.MATERIALS_DIR, lambda name: curriculum.canonical_course_name(plan, name))
     if not chunks:
         print("Nuk u gjet asnjë dokument te data/. Vendosi PDF-të atje dhe provo përsëri.")
         return 0
@@ -58,6 +61,9 @@ def build_index() -> int:
                     "program": c["program"],
                     "chunk_index": c["chunk_index"],
                     "page": c["page"],
+                    "doc_type": c["doc_type"],
+                    "course": c["course"],
+                    "title": c["title"],
                 }
                 for c in batch
             ],

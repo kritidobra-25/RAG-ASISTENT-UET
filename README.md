@@ -149,3 +149,12 @@ Mbi RAG-un ekzistues, `src/advisor.py` shton një këshilltar akademik:
 - **Student potencial:** profili (arsimi, interesat, aftësitë, niveli, objektivat) → motori i rekomandimit → orientim për programet, me RAG dhe burime.
 - **Plani mësimor i strukturuar:** `python src/build_curriculum.py` nxjerr lëndët (viti, semestri, ECTS, faqja) nga tabelat e PDF-ve te `data/curriculum.json` dhe printon paralajmërimet për verifikim. Ekzekutoje sa herë ndryshojnë planet.
 - **Kufizime:** dokumentet nuk përmbajnë fakultetin, departamentin, përmbajtjen e lëndëve ose materialet mësimore. Për këtë arsye fakulteti dhe departamenti plotësohen nga studenti, dhe ndihma për studimin kufizohet te lista e lëndëve, ECTS dhe këshilla të përgjithshme të shënuara si të tilla. Te Streamlit Community Cloud skedari SQLite fshihet kur serveri rinis, kështu që llogaritë nuk janë të qëndrueshme aty pa një bazë të jashtme.
+
+## Asistenti i studentit aktual dhe Study Mode
+
+- **Lëndët identifikohen vetë** nga plani zyrtar (`data/curriculum.json`): programi, specializimi, viti dhe semestri. Specializimet nxirren nga titujt e grupeve C te tabela (p.sh. "IT e biznesit"). Për programet ku tabela nuk i lidh lëndët me specializim, shfaqen vetëm lëndët e përbashkëta.
+- **Study Mode:** studenti zgjedh një lëndë të semestrit dhe mund të kërkojë shpjegim, pyetje, quiz, ushtrime, flashcards, provim prove, plan përsëritjeje ose përmbledhje. Kërkimi RAG merr fillimisht materialet e lëndës (`data/lendet/`), pastaj dokumentet zyrtare të programit.
+- **Materialet e lëndëve** nuk ekzistojnë ende te projekti. Shih `data/lendet/README.md` për mënyrën e shtimit. Pa materiale, sistemi thotë hapur që nuk i ka dhe përdor vetëm faktet e planit. Kur studenti emërton një temë, jep shpjegim të përgjithshëm të shënuar qartë si jo nga materialet e lëndës. Studenti mund të ngjitë edhe materialin e vet.
+- **Konteksti i bisedës:** pyetja rishkruhet si pyetje e plotë me historinë ("Po REST?" pas "Çfarë është API?") para kërkimit.
+- **Studenti aktual nuk merr rekomandime për programe të tjera**, përveç kur i kërkon qartë. Kërkimi i tij kufizohet te programi i vet.
+- **Moduli:** `src/student_assistant.py`, i pavarur nga rruga e studentit potencial (`src/advisor.py`).

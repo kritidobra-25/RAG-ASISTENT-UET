@@ -18,7 +18,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from config import CHUNK_OVERLAP, CHUNK_SIZE, DATA_DIR
+from config import CHUNK_OVERLAP, CHUNK_SIZE, DATA_DIR, MATERIALS_DIR
 
 # Emrat e programeve, njohur nga fjalë kyçe në emrin e skedarit.
 # Rendi ka rëndësi: rregullat specifike (MP/MSH) para atyre të përgjithshme,
@@ -63,7 +63,7 @@ def extract_text_from_pdf(pdf_path: Path) -> str:
 
 def extract_pages(path: Path) -> list[tuple[int, str]]:
     """Kthen [(numri i faqes, teksti)]. Për .txt kthen një element me faqe 0 (pa faqe)."""
-    if path.suffix.lower() == ".txt":
+    if path.suffix.lower() in {".txt", ".md"}:
         return [(0, path.read_text(encoding="utf-8"))]
     reader = PdfReader(str(path))
     return [(number, page.extract_text() or "") for number, page in enumerate(reader.pages, start=1)]
@@ -155,11 +155,51 @@ def load_and_chunk_all_pdfs(data_dir: Path = DATA_DIR) -> list[dict]:
                         "program": program,
                         "chunk_index": index,
                         "page": page_number,
+                        "doc_type": "program",
+                        "course": "",
+                        "title": program,
                     }
                 )
                 index += 1
         print(f"  {path.name}: {index} segmente  ({program})")
     return all_chunks
+
+
+def load_course_materials(materials_dir: Path = MATERIALS_DIR, course_names: "Callable[[str], str | None] | None" = None) -> list[dict]:
+    """Lexon materialet e lëndëve (PDF, TXT, MD) nga data/lendet/ dhe kthen segmentet.
+
+    Lënda caktohet nga emri i nëndosjes (data/lendet/<Lënda>/skedari.pdf) ose, pa nëndosje,
+    nga emri i skedarit. `course_names` (opsionale) e kthen emrin e shkruar në emrin zyrtar
+    të lëndës nga plani mësimor, që materiali të gjendet kur studenti zgjedh atë lëndë.
+    """
+    materials_dir = Path(materials_dir)
+    if not materials_dir.exists():
+        return []
+    chunks: list[dict] = []
+    files = sorted(p for p in materials_dir.rglob("*") if p.suffix.lower() in {".pdf", ".txt", ".md"} and p.name.lower() != "readme.md")
+    for path in files:
+        written = path.parent.name if path.parent != materials_dir else path.stem
+        written = re.sub(r"[_\-]+", " ", written).strip()
+        course = (course_names(written) if course_names else None) or written
+        index = 0
+        for page_number, page_text in extract_pages(path):
+            for piece in chunk_text(clean_text(page_text)):
+                chunks.append(
+                    {
+                        "id": f"material_{path.stem}_{index:03d}",
+                        "text": f"Lënda: {course}\n{piece}",
+                        "source": path.name,
+                        "program": "",
+                        "chunk_index": index,
+                        "page": page_number,
+                        "doc_type": "material",
+                        "course": course,
+                        "title": path.name,
+                    }
+                )
+                index += 1
+        print(f"  [material] {path.name}: {index} segmente  (lënda: {course})")
+    return chunks
 
 
 if __name__ == "__main__":

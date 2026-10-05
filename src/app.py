@@ -5,6 +5,7 @@ Nise nga dosja kryesore e projektit:
     streamlit run src/app.py
 """
 
+import html
 import shutil
 import sys
 from pathlib import Path
@@ -165,21 +166,29 @@ with st.sidebar:
             )
             summary = academic_to_text(academic)
             st.markdown(summary if summary else "*Profili akademik është ende bosh.*")
-            with st.form("academic_form"):
-                faculty = st.text_input("Fakulteti", academic["faculty"])
-                department = st.text_input("Departamenti", academic["department"])
-                programs = curriculum.programs(curriculum_data)
-                program = st.selectbox("Programi", programs, index=pick(programs, academic["program"]), placeholder="Zgjidh programin")
-                specialization = st.text_input("Specializimi", academic["specialization"])
-                year = st.selectbox("Viti", [1, 2], index=pick([1, 2], academic["year"]), placeholder="Zgjidh vitin")
-                semester = st.selectbox("Semestri (brenda vitit)", [1, 2], index=pick([1, 2], academic["semester"]), placeholder="Zgjidh semestrin")
-                if st.form_submit_button("Ruaj profilin akademik", width="stretch"):
-                    academic.update(
-                        faculty=faculty.strip(), department=department.strip(), program=program or "",
-                        specialization=specialization.strip(), year=year or 0, semester=semester or 0,
-                    )
-                    save_user()
-                    st.rerun()
+            faculty = st.text_input("Fakulteti", academic["faculty"], key="acad_faculty")
+            department = st.text_input("Departamenti", academic["department"], key="acad_department")
+            programs = curriculum.programs(curriculum_data)
+            program = st.selectbox("Programi", programs, index=pick(programs, academic["program"]), placeholder="Zgjidh programin", key="acad_program")
+            profiles = curriculum.profiles_for(curriculum_data, program) if program else []
+            if profiles:
+                specialization = st.selectbox(
+                    "Specializimi", profiles, index=pick(profiles, curriculum.match_profile(curriculum_data, program, academic["specialization"])),
+                    placeholder="Zgjidh specializimin", key=f"acad_spec_{program}",
+                )
+            else:
+                specialization = st.text_input("Specializimi (nëse ka)", academic["specialization"], key=f"acad_spec_text_{program}")
+            year = st.selectbox("Viti", [1, 2], index=pick([1, 2], academic["year"]), placeholder="Zgjidh vitin", key="acad_year")
+            semester = st.selectbox("Semestri (brenda vitit)", [1, 2], index=pick([1, 2], academic["semester"]), placeholder="Zgjidh semestrin", key="acad_semester")
+            if st.button("Ruaj profilin akademik", width="stretch", key="acad_save"):
+                academic.update(
+                    faculty=faculty.strip(), department=department.strip(), program=program or "",
+                    specialization=(specialization or "").strip(), year=year or 0, semester=semester or 0,
+                )
+                st.session_state["study_course"] = None
+                st.session_state.pop("study_select", None)
+                save_user()
+                st.rerun()
 
     with st.expander("Profili im" if role == "prospective" else "Interesat dhe aftësitë", expanded=role == "prospective" and not is_empty(profile)):
         st.caption(
@@ -241,6 +250,79 @@ st.caption(
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
+# ---------- Konteksti akademik dhe Study Mode (vetëm studenti aktual) ----------
+STUDY_ACTIONS = {
+    "quiz": ("Quiz", "Më bëj një quiz për lëndën {course}."),
+    "exercises": ("Ushtrime", "Më jep ushtrime praktike për lëndën {course}."),
+    "flashcards": ("Flashcards", "Më krijo flashcards për lëndën {course}."),
+    "mock_exam": ("Provim prove", "Më bëj një test prove për lëndën {course}."),
+    "review_plan": ("Plan përsëritjeje", "Më krijo një plan përsëritjeje për lëndën {course}."),
+    "summary": ("Përmbledhje", "Më bëj një përmbledhje të materialit të lëndës {course}."),
+}
+
+
+def leave_study_mode() -> None:
+    st.session_state["study_course"] = None
+    st.session_state["study_select"] = None
+
+
+def current_student_panel() -> list[dict]:
+    """Karta e kontekstit, lista e lëndëve dhe Study Mode. Kthen lëndët e semestrit."""
+    if not academic.get("program"):
+        st.info("Modaliteti: Student aktual. Plotëso programin, vitin dhe semestrin te profili im akademik, që lëndët të përcaktohen automatikisht.")
+        return []
+    lines = [academic["program"]]
+    if academic.get("specialization"):
+        lines.append(academic["specialization"])
+    if academic.get("year") and academic.get("semester"):
+        lines.append(f"Viti {academic['year']} · Semestri {academic['semester']}")
+    st.markdown(
+        '<div class="context-card"><span class="context-badge">Student aktual</span>'
+        + "".join(f"<div>{html.escape(str(line))}</div>" for line in lines)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+    if not (academic.get("year") and academic.get("semester")):
+        return []
+
+    courses = curriculum.courses_for(curriculum_data, academic["program"], int(academic["year"]), int(academic["semester"]), academic.get("specialization", ""))
+    names = sorted({c["name"] for c in courses})
+    if not names:
+        st.caption("Nuk u gjetën lëndë për këtë vit dhe semestër te plani mësimor.")
+        return courses
+
+    with st.expander(f"Lëndët e semestrit ({len(names)})", expanded=not st.session_state.get("study_course")):
+        for course in sorted(courses, key=lambda c: c["name"]):
+            st.markdown(f"- {course['name']}, {course['ects']} ECTS")
+        if curriculum.profiles_for(curriculum_data, academic["program"]) and not curriculum.match_profile(curriculum_data, academic["program"], academic.get("specialization", "")):
+            st.caption("Lëndët e specializimit nuk shfaqen, sepse specializimi nuk është zgjedhur te profili.")
+    st.selectbox("Study Mode: zgjidh një lëndë", names, index=pick(names, st.session_state.get("study_course")), placeholder="Zgjidh lëndën", key="study_select")
+    st.session_state["study_course"] = st.session_state.get("study_select")
+
+    course = st.session_state["study_course"]
+    if course:
+        ects = next((c["ects"] for c in courses if c["name"] == course), "")
+        st.markdown(f'<div class="study-banner">Study Mode: <b>{html.escape(course)}</b> · {ects} ECTS</div>', unsafe_allow_html=True)
+        columns = st.columns(len(STUDY_ACTIONS))
+        for column, (task, (label, template)) in zip(columns, STUDY_ACTIONS.items()):
+            if column.button(label, key=f"study_{task}", width="stretch"):
+                st.session_state["pending_question"] = template.format(course=course)
+                st.session_state["pending_task"] = task
+        with st.expander("Materiali im (opsional)"):
+            st.text_area(
+                "Ngjit shënimet ose materialin e lëndës. Përdoret si burim për quiz, flashcards dhe përmbledhje.",
+                key="user_material", height=140,
+            )
+        st.button("Dil nga Study Mode", key="leave_study", on_click=leave_study_mode)
+    return courses
+
+
+role_label = accounts.ROLES[role]
+if role == "current":
+    current_student_panel()
+else:
+    st.caption(f"Modaliteti: {role_label}")
+
 if st.session_state["messages"] and st.button("Pastro bisedën", key="clear_main"):
     st.session_state["messages"] = []
     st.session_state["followups"] = 0
@@ -275,6 +357,8 @@ for message in st.session_state["messages"]:
 
 typed_question = st.chat_input("Shkruaj pyetjen tënde për UETassist")
 question = typed_question or st.session_state.pop("pending_question", None)
+pending_task = st.session_state.pop("pending_task", None)
+forced_task = None if typed_question else pending_task
 
 if question:
     st.session_state["messages"].append({"role": "user", "content": question})
@@ -292,6 +376,9 @@ if question:
                     role=role,
                     academic=academic,
                     curriculum=curriculum_data,
+                    study_course=st.session_state.get("study_course") if role == "current" else None,
+                    forced_task=forced_task,
+                    user_material=st.session_state.get("user_material", "") if role == "current" else "",
                 )
         except llm.MissingApiKeyError as error:
             st.error(str(error))

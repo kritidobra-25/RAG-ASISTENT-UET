@@ -5,6 +5,7 @@ Nise nga dosja kryesore e projektit:
     streamlit run src/app.py
 """
 
+import shutil
 import sys
 from pathlib import Path
 
@@ -20,6 +21,7 @@ except ImportError:
 
 import streamlit as st  # noqa: E402
 
+import config  # noqa: E402
 import llm  # noqa: E402
 from student_profile import is_empty, new_profile, profile_to_text  # noqa: E402
 from advisor import Advisor  # noqa: E402
@@ -47,6 +49,7 @@ def load_assistant() -> RagAssistant:
         # Serveri i ri nuk e ka bazën (chroma_db/ nuk ruhet te GitHub): ndërtohet
         # vetë nga dokumentet te data/ herën e parë. Kërkon OPENAI_API_KEY.
         with st.spinner("Duke ndërtuar bazën e njohurive nga dokumentet (vetëm herën e parë)..."):
+            shutil.rmtree(config.DB_DIR, ignore_errors=True)  # nis nga e para, edhe nëse baza ishte e papajtueshme
             build_index()
         return RagAssistant()
 
@@ -62,6 +65,9 @@ except KnowledgeBaseMissingError as error:
         f"{error}\n\nHap terminalin në dosjen kryesore të projektit dhe ekzekuto "
         "`python src/build_index.py`, pastaj rifresko këtë faqe."
     )
+    if error.__cause__:
+        with st.expander("Detaje teknike"):
+            st.code(f"{type(error.__cause__).__name__}: {error.__cause__}")
     st.stop()
 
 # ---------- Shiriti anësor ----------

@@ -31,3 +31,7 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "700"))       # karaktere për segment
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))  # mbivendosje mes segmenteve
 TOP_K = int(os.getenv("TOP_K", "5"))                    # sa segmente merren për pyetje
 EMBED_BATCH_SIZE = 64                                   # segmente për një thirrje API
+
+# Llogaritë e përdoruesve (SQLite) dhe plani mësimor i strukturuar
+USERS_DB = ROOT / "users.sqlite3"                   # krijohet vetë; nuk shkon te GitHub
+CURRICULUM_PATH = DATA_DIR / "curriculum.json"      # krijohet nga build_curriculum.py

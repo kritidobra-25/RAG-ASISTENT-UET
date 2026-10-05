@@ -164,11 +164,12 @@ class RagAssistant:
             blocks.append(f"[Burimi: {citation(chunk)}]\n{chunk['text']}")
         return "\n\n---\n\n".join(blocks)
 
-    def answer(self, question: str, k: int = config.TOP_K) -> dict:
+    def answer(self, question: str, k: int = config.TOP_K, hint: str = "") -> dict:
         """Përgjigjet një pyetjeje. Kthen përgjigjen, burimet dhe kohët e matura."""
         started = time.perf_counter()
         small_talk = is_small_talk(question)
-        chunks = [] if small_talk else self.retrieve(question, k)
+        # hint (p.sh. programi i studentit) pasuron vetëm kërkimin, jo pyetjen te prompti.
+        chunks = [] if small_talk else self.retrieve(f"{question}. {hint}" if hint else question, k)
         retrieval_done = time.perf_counter()
 
         if small_talk:

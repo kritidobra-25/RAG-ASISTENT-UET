@@ -14,6 +14,7 @@ INTENTS = {
     "general_info": "pyetje e përgjithshme për UET-në",
     "program_info": "informacion për një program studimi",
     "course_info": "informacion për një lëndë",
+    "study_help": "ndihmë për lëndët e semestrit aktual ose për studimin (student aktual)",
     "admission": "pranimi, kriteret, dokumentet",
     "tuition_fees": "tarifat dhe pagesat",
     "academic_calendar": "kalendari akademik, afatet",
@@ -64,12 +65,13 @@ Rules:
 - Personalized intents are only for requests that need the student's own situation. Plain factual questions are never personalized.""" % json.dumps(list(INTENTS))
 
 
-def analyze_turn(question: str, profile_text: str, history: list[dict] | None = None) -> dict:
+def analyze_turn(question: str, profile_text: str, history: list[dict] | None = None, role: str = "prospective") -> dict:
     """Kthen {'intent', 'profile_updates', 'search_queries'}."""
     recent = "\n".join(
         f"{m['role']}: {m['content'][:300]}" for m in (history or [])[-6:]
     )
     user_prompt = (
+        f"Student type: {'current student' if role == 'current' else 'prospective student (not enrolled yet)'}\n\n"
         f"Existing profile:\n{profile_text or '(empty)'}\n\n"
         f"Recent messages:\n{recent or '(none)'}\n\n"
         f"Latest student message:\n{question}"

@@ -21,9 +21,11 @@ except ImportError:
 
 import streamlit as st  # noqa: E402
 
+import accounts  # noqa: E402
 import config  # noqa: E402
+import curriculum  # noqa: E402
 import llm  # noqa: E402
-from student_profile import is_empty, new_profile, profile_to_text  # noqa: E402
+from student_profile import academic_to_text, is_empty, new_academic, new_profile, profile_to_text  # noqa: E402
 from advisor import Advisor  # noqa: E402
 from build_index import build_index  # noqa: E402
 from rag import KnowledgeBaseMissingError, RagAssistant  # noqa: E402
@@ -40,6 +42,75 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+accounts.init_db()
+
+
+def pick(options: list, value):
+    """Indeksi i vlerës te lista, ose None (që selectbox të mbetet pa zgjedhje)."""
+    return options.index(value) if value in options else None
+
+
+def login_screen() -> None:
+    logo_col, title_col = st.columns([1, 6], vertical_alignment="center")
+    logo_col.image(str(LOGO_PATH), width=72)
+    title_col.title("UETassist")
+    st.caption(
+        "Hyr ose krijo një llogari që profili yt të ruhet. Përdor një pseudonim, jo emrin real. "
+        "Biseda nuk ruhet, vetëm profili."
+    )
+    login_tab, register_tab = st.tabs(["Hyr", "Regjistrohu"])
+    with login_tab, st.form("login_form"):
+        username = st.text_input("Emri i përdoruesit")
+        password = st.text_input("Fjalëkalimi", type="password")
+        if st.form_submit_button("Hyr", width="stretch"):
+            user = accounts.authenticate(username, password)
+            if user:
+                start_session(user)
+                st.rerun()
+            st.error("Emri i përdoruesit ose fjalëkalimi nuk është i saktë.")
+    with register_tab, st.form("register_form"):
+        new_username = st.text_input("Emri i përdoruesit (pseudonim)")
+        new_password = st.text_input("Fjalëkalimi (të paktën 8 karaktere)", type="password")
+        role_label = st.radio("Je:", list(accounts.ROLES.values()), index=None)
+        if st.form_submit_button("Krijo llogarinë", width="stretch"):
+            try:
+                role = next((key for key, label in accounts.ROLES.items() if label == role_label), "")
+                start_session(accounts.create_user(new_username, new_password, role))
+                st.rerun()
+            except accounts.AccountError as error:
+                st.error(str(error))
+
+
+def start_session(user: dict) -> None:
+    st.session_state.update(
+        user_id=user["id"], username=user["username"], role=user["role"],
+        profile=user["profile"], academic=user["academic"], messages=[], followups=0,
+    )
+
+
+def save_user() -> None:
+    accounts.save_user_data(
+        st.session_state["user_id"], st.session_state["profile"], st.session_state["academic"], st.session_state["role"]
+    )
+
+
+@st.cache_data
+def load_curriculum() -> dict:
+    data = curriculum.load()
+    if not data:  # data/curriculum.json mungon: ndërtohet nga PDF-të (pa kosto API)
+        data = curriculum.build()
+        try:
+            curriculum.save(data)
+        except OSError:
+            pass
+    return data
+
+
+# Pa hyrje nuk ngarkohet baza e njohurive: vizitorët e panjohur nuk shkaktojnë kosto OpenAI.
+if "user_id" not in st.session_state:
+    login_screen()
+    st.stop()
 
 @st.cache_resource(show_spinner="Duke ngarkuar bazën e njohurive...")
 def load_assistant() -> RagAssistant:
@@ -71,14 +142,50 @@ except KnowledgeBaseMissingError as error:
     st.stop()
 
 # ---------- Shiriti anësor ----------
+curriculum_data = load_curriculum()
+role = st.session_state["role"]
+profile = st.session_state["profile"]
+academic = st.session_state["academic"]
+
 with st.sidebar:
-    st.image(str(LOGO_PATH), use_container_width=True)
-    with st.expander("Profili im", expanded=not is_empty(st.session_state.get("profile"))):
+    st.image(str(LOGO_PATH), width="stretch")
+    st.markdown(f"**{st.session_state['username']}**")
+    role_labels = list(accounts.ROLES.values())
+    chosen = st.selectbox("Roli", role_labels, index=role_labels.index(accounts.ROLES[role]))
+    if chosen != accounts.ROLES[role]:
+        st.session_state["role"] = next(key for key, label in accounts.ROLES.items() if label == chosen)
+        save_user()
+        st.rerun()
+
+    if role == "current":
+        with st.expander("Profili im akademik", expanded=not academic.get("program")):
+            st.caption(
+                "Programi, viti dhe semestri përdoren për të gjetur lëndët e semestrit nga plani mësimor. "
+                "Fakulteti, departamenti dhe specializimi nuk gjenden te dokumentet, prandaj i plotëson ti."
+            )
+            summary = academic_to_text(academic)
+            st.markdown(summary if summary else "*Profili akademik është ende bosh.*")
+            with st.form("academic_form"):
+                faculty = st.text_input("Fakulteti", academic["faculty"])
+                department = st.text_input("Departamenti", academic["department"])
+                programs = curriculum.programs(curriculum_data)
+                program = st.selectbox("Programi", programs, index=pick(programs, academic["program"]), placeholder="Zgjidh programin")
+                specialization = st.text_input("Specializimi", academic["specialization"])
+                year = st.selectbox("Viti", [1, 2], index=pick([1, 2], academic["year"]), placeholder="Zgjidh vitin")
+                semester = st.selectbox("Semestri (brenda vitit)", [1, 2], index=pick([1, 2], academic["semester"]), placeholder="Zgjidh semestrin")
+                if st.form_submit_button("Ruaj profilin akademik", width="stretch"):
+                    academic.update(
+                        faculty=faculty.strip(), department=department.strip(), program=program or "",
+                        specialization=specialization.strip(), year=year or 0, semester=semester or 0,
+                    )
+                    save_user()
+                    st.rerun()
+
+    with st.expander("Profili im" if role == "prospective" else "Interesat dhe aftësitë", expanded=role == "prospective" and not is_empty(profile)):
         st.caption(
-            "Profili juaj plotësohet automatikisht gjatë bisedës dhe përditësohet sipas "
-            "informacionit që ndani. Të dhënat ruhen vetëm gjatë këtij sesioni."
+            "Ky profil plotësohet vetë nga biseda dhe përditësohet sipas informacionit që ndan. "
+            "Mund ta ndryshosh edhe manualisht."
         )
-        profile = st.session_state.setdefault("profile", new_profile())
         summary = profile_to_text(profile)
         st.markdown(summary if summary else "*Profili juaj është ende bosh.*")
 
@@ -88,30 +195,38 @@ with st.sidebar:
             goal = st.text_input("Karriera e dëshiruar", profile["career_goal"], placeholder="p.sh. Data Engineer")
             interests = st.text_input("Fusha e interesit", ", ".join(profile["interests"]), placeholder="psh: IT, Finance, Biznes")
             skills = st.text_input("Aftësi teknike", ", ".join(profile["technical_skills"]), placeholder="p.sh. SQL, Python")
-            program = st.selectbox(
+            desired = st.selectbox(
                 "Programi i dëshiruar",
                 PROGRAM_OPTIONS,
-                index=PROGRAM_OPTIONS.index(profile["desired_program"]) if profile["desired_program"] in PROGRAM_OPTIONS else None,
+                index=pick(PROGRAM_OPTIONS, profile["desired_program"]),
                 placeholder="Zgjidh programin",
             )
-            if st.form_submit_button("Ruaj profilin", use_container_width=True):
+            if st.form_submit_button("Ruaj profilin", width="stretch"):
                 profile["academic_background"] = background.strip()
                 profile["career_goal"] = goal.strip()
                 profile["interests"] = [x.strip() for x in interests.split(",") if x.strip()]
                 profile["technical_skills"] = [x.strip() for x in skills.split(",") if x.strip()]
-                profile["desired_program"] = program or ""
+                profile["desired_program"] = desired or ""
+                save_user()
                 st.rerun()
 
-        if st.button("Gjenero rrugën akademike", use_container_width=True, key="gen_path"):
+        if role == "prospective" and st.button("Gjenero rrugën akademike", width="stretch", key="gen_path"):
             st.session_state["pending_question"] = PATH_QUESTION
-        if st.button("Rivendos profilin", use_container_width=True, key="reset_profile"):
+        if st.button("Rivendos profilin", width="stretch", key="reset_profile"):
             st.session_state["profile"] = new_profile()
+            if role == "current":
+                st.session_state["academic"] = new_academic()
             st.session_state["followups"] = 0
+            save_user()
             st.rerun()
 
-    if st.button("Pastro bisedën", use_container_width=True, key="clear_sidebar"):
+    if st.button("Pastro bisedën", width="stretch", key="clear_sidebar"):
         st.session_state["messages"] = []
         st.session_state["followups"] = 0
+        st.rerun()
+    if st.button("Dil", width="stretch", key="logout"):
+        for key in list(st.session_state):
+            del st.session_state[key]
         st.rerun()
 
 # ---------- Biseda ----------
@@ -174,6 +289,9 @@ if question:
                     profile=st.session_state.get("profile"),
                     history=st.session_state["messages"][:-1],
                     followups_asked=st.session_state.get("followups", 0),
+                    role=role,
+                    academic=academic,
+                    curriculum=curriculum_data,
                 )
         except llm.MissingApiKeyError as error:
             st.error(str(error))
@@ -201,4 +319,5 @@ if question:
                 }
             )
             if result["profile_changes"]:
+                save_user()
                 st.rerun()  # rifreskon përmbledhjen e profilit te shiriti anësor

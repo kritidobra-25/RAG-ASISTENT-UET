@@ -131,3 +131,36 @@ FOLLOW_UP_PARTS = {
 def follow_up_question(missing: list[str]) -> str:
     parts = [FOLLOW_UP_PARTS[key] for key in missing[:2]]
     return "Për të të rekomanduar një rrugë të përshtatshme, më trego " + " dhe ".join(parts) + "?"
+
+
+# ---------- Të dhënat akademike të studentit aktual ----------
+# Fakulteti, departamenti dhe specializimi nuk gjenden te dokumentet e ngarkuara,
+# prandaj plotësohen nga vetë studenti (tekst i lirë). Programi, viti dhe semestri
+# përdoren për të gjetur lëndët e semestrit nga plani mësimor.
+ACADEMIC_FIELDS = {
+    "faculty": "Fakulteti",
+    "department": "Departamenti",
+    "program": "Programi",
+    "specialization": "Specializimi",
+    "year": "Viti",
+    "semester": "Semestri",
+}
+
+
+def new_academic() -> dict:
+    return {"faculty": "", "department": "", "program": "", "specialization": "", "year": 0, "semester": 0}
+
+
+def academic_complete(academic: dict | None) -> bool:
+    """Programi, viti dhe semestri mjaftojnë për të gjetur lëndët aktuale."""
+    return bool(academic and academic.get("program") and academic.get("year") and academic.get("semester"))
+
+
+def academic_to_text(academic: dict | None) -> str:
+    if not academic:
+        return ""
+    parts = []
+    for key, label in ACADEMIC_FIELDS.items():
+        if academic.get(key):
+            parts.append(f"- {label}: {academic[key]}")
+    return "\n".join(parts)

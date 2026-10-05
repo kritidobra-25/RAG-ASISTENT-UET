@@ -141,3 +141,11 @@ Mbi RAG-un ekzistues, `src/advisor.py` shton një këshilltar akademik:
 - **Burimet** shfaqen me dokumentin dhe faqen, vetëm për fragmentet e cituara. Faqet shfaqen pasi të ekzekutosh përsëri `python src\build_index.py`.
 
 **Kufizim i njohur.** Analiza e boshllëqeve të aftësive kërkon rezultate të pritura të të nxënit ose nivele të kërkuara për lëndët. Dokumentet aktuale kanë vetëm objektiva, plane mësimore (lëndë dhe ECTS) dhe profile, prandaj sistemi tregon cilat lëndë mbulojnë një aftësi dhe e thotë hapur kur niveli i kërkuar nuk specifikohet. Për analizë më të saktë duhen shtuar te `data/` përshkrimet e lëndëve me rezultatet e të nxënit.
+
+## Llogaritë dhe dy rrugët e studentit
+
+- **Hyrja:** `src/accounts.py` ruan llogaritë te SQLite (`users.sqlite3`, i injoruar nga Git). Fjalëkalimet ruhen vetëm si hash PBKDF2-SHA256 me kripë. Përdoret pseudonim, jo emri real. Biseda nuk ruhet, vetëm roli, profili dhe të dhënat akademike. Pa hyrje nuk ngarkohet baza e njohurive.
+- **Student aktual:** profili akademik (fakulteti, departamenti, programi, specializimi, viti, semestri) → përputhja me planin mësimor → lëndët e semestrit → informacion akademik ose ndihmë për studimin, me RAG dhe burime.
+- **Student potencial:** profili (arsimi, interesat, aftësitë, niveli, objektivat) → motori i rekomandimit → orientim për programet, me RAG dhe burime.
+- **Plani mësimor i strukturuar:** `python src/build_curriculum.py` nxjerr lëndët (viti, semestri, ECTS, faqja) nga tabelat e PDF-ve te `data/curriculum.json` dhe printon paralajmërimet për verifikim. Ekzekutoje sa herë ndryshojnë planet.
+- **Kufizime:** dokumentet nuk përmbajnë fakultetin, departamentin, përmbajtjen e lëndëve ose materialet mësimore. Për këtë arsye fakulteti dhe departamenti plotësohen nga studenti, dhe ndihma për studimin kufizohet te lista e lëndëve, ECTS dhe këshilla të përgjithshme të shënuara si të tilla. Te Streamlit Community Cloud skedari SQLite fshihet kur serveri rinis, kështu që llogaritë nuk janë të qëndrueshme aty pa një bazë të jashtme.

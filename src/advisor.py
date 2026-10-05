@@ -16,10 +16,13 @@ RagAssistant.answer() pa asnjë ndryshim.
 import re
 
 import config
+import curriculum as curriculum_module
 import intent as intent_module
 import llm
 from rag import REFUSAL_PREFIX, SYSTEM_PROMPT, RagAssistant, is_small_talk, sanitize_labels
 from student_profile import (
+    academic_complete,
+    academic_to_text,
     follow_up_question,
     merge_profile,
     missing_for,
@@ -108,6 +111,13 @@ Struktura:
 }
 
 
+STUDY_INSTRUCTION = """Detyra: ndihmo studentin aktual me lëndët e semestrit të tij.
+- "Plani mësimor i semestrit aktual" është i nxjerrë nga dokumentet zyrtare dhe është burim fakti. Cito lëndët me emrin dhe ECTS siç janë dhënë, dhe burimin (Emri i programit, f. N).
+- Nëse pyetja është për lëndët, listo lëndët përkatëse të semestrit, të grupuara sipas kategorisë. Lëndët e shënuara "me zgjedhje ose sipas profilit" nuk janë të gjitha të detyrueshme: thuaje këtë.
+- Dokumentet nuk përmbajnë përmbajtjen e detajuar, materialet ose rezultatet e të nxënit të lëndëve. Nëse studenti pyet për to, thuaje hapur dhe mos shpik tema, tekste ose provime.
+- Këshillat praktike të studimit (planifikim, përparësi sipas ECTS) lejohen, por shënoji "(këshillë e përgjithshme, jo nga dokumentet)"."""
+
+
 class Advisor:
     def __init__(self, rag: RagAssistant) -> None:
         self.rag = rag
@@ -119,6 +129,9 @@ class Advisor:
         profile: dict | None = None,
         history: list[dict] | None = None,
         followups_asked: int = 0,
+        role: str = "prospective",
+        academic: dict | None = None,
+        curriculum: dict | None = None,
     ) -> dict:
         """Përgjigjet një mesazhi. Kthen të njëjtat çelësa si RagAssistant.answer(),
         plus: intent, profile (i përditësuar), profile_changes, follow_up (bool)."""
@@ -127,12 +140,18 @@ class Advisor:
         if is_small_talk(question):
             return self._wrap(self.rag.answer(question), "small_talk", profile, [], False)
 
-        analysis = intent_module.analyze_turn(question, profile_to_text(profile), history)
+        analysis = intent_module.analyze_turn(question, profile_to_text(profile), history, role)
         profile, changes = merge_profile(profile, analysis["profile_updates"])
         intent = analysis["intent"]
 
+        # Rruga e studentit aktual: profili akademik → plani mësimor → lëndët aktuale.
+        if role == "current" and intent in {"study_help", "course_info"}:
+            return self._wrap(self._current_courses(question, academic, curriculum or {}), intent, profile, changes, False)
+
         if intent not in intent_module.PERSONALIZED_INTENTS:
-            return self._wrap(self.rag.answer(question), intent, profile, changes, False)
+            # Informacion akademik: RAG standard. Për studentin aktual kërkimi favorizon programin e tij.
+            hint = (academic or {}).get("program", "") if role == "current" else ""
+            return self._wrap(self.rag.answer(question, hint=hint), intent, profile, changes, False)
 
         missing = missing_for(intent, profile)
         if missing and followups_asked < MAX_FOLLOW_UPS:
@@ -146,6 +165,38 @@ class Advisor:
             return self._wrap(reply, intent, profile, changes, True)
 
         return self._wrap(self._personalized(question, intent, profile, history, analysis), intent, profile, changes, False)
+
+    # ---------- studenti aktual: lëndët e semestrit ----------
+    def _current_courses(self, question: str, academic: dict | None, curriculum: dict) -> dict:
+        base = {"question": question, "refused": False, "sources": [], "chunks": []}
+        if not academic_complete(academic):
+            return {**base, "answer": "Për të të treguar lëndët e semestrit, plotëso te profili im programin, vitin dhe semestrin."}
+
+        program, year, semester = academic["program"], int(academic["year"]), int(academic["semester"])
+        courses = curriculum_module.courses_for(curriculum, program, year, semester)
+        if not courses:
+            return {
+                **base,
+                "answer": f"Nuk gjej lëndë për {program}, viti {year}, semestri {semester} te plani mësimor i nxjerrë nga dokumentet. "
+                "Kontrollo vitin dhe semestrin te profili, ose pyet administratën e UET-së.",
+            }
+
+        chunks = self.rag.retrieve_multi([f"{question}. {program}", f"{program} {', '.join(c['name'] for c in courses[:3])}"], k=config.TOP_K, limit=8)
+        user_prompt = (
+            f"Plani mësimor i semestrit aktual ({program}, viti {year}, semestri {semester}):\n"
+            f"{curriculum_module.format_courses(courses)}\n\n"
+            f"Fragmentet e dokumenteve:\n\n{self.rag._build_context(chunks)}\n\n"
+            f"Profili akademik i studentit:\n{academic_to_text(academic)}\n\n"
+            f"{STUDY_INSTRUCTION}\n\n{COMMON_RULES}\n\nPyetja e studentit: {question}"
+        )
+        text = sanitize_labels(llm.chat_completion(SYSTEM_PROMPT, user_prompt), chunks)
+        refused = text.strip().startswith(REFUSAL_PREFIX)
+        # Burimi i lëndëve është vetë plani mësimor: programi dhe faqet e tabelës.
+        plan_pages = sorted({c["page"] for c in courses if c.get("page")})
+        sources = [] if refused else [{"program": program, "source": courses[0]["source"], "pages": plan_pages}]
+        if sources:
+            text += "\n\n" + format_sources(sources)
+        return {"question": question, "answer": text, "refused": refused, "sources": sources, "chunks": chunks}
 
     # ---------- personalizimi ----------
     def _personalized(self, question: str, intent: str, profile: dict, history: list[dict] | None, analysis: dict) -> dict:

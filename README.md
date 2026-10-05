@@ -15,6 +15,8 @@ RAG-ASISTENT-UET/
 │   ├── query.py             hapi 3: testimi nga terminali
 │   ├── evaluate.py          hapi 4: vlerësimi me pyetjet testuese
 │   ├── app.py               hapi 5: ndërfaqja bisedore (Streamlit)
+│   ├── accounts.py          llogaritë dhe hyrja (ruhen te users/, jo në git)
+│   ├── student_profile.py   profili i studentit aktual dhe potencial
 │   └── llm.py               të gjitha thirrjet drejt OpenAI
 ├── eval/test_questions.csv  25 pyetje testuese me përgjigje të pritura
 ├── .env.example             shablloni për çelësin API
@@ -89,6 +91,19 @@ python src\evaluate.py
 ```
 
 Ekzekuton 25 pyetjet dhe ruan `eval\rezultatet.csv`. Hape në Excel dhe plotëso dy kolonat `vleresimi` (e saktë / pjesërisht e saktë / e pasaktë) dhe `burimi_mbeshtet` (po / jo). Nga këto del tabela e Kapitullit V.
+
+## Rrugët e përdorimit sipas profilit
+
+Pas hyrjes, asistenti i përshtatet llojit të studentit:
+
+| Lloji | Profili | Rrugët |
+|---|---|---|
+| Student aktual | fakulteti, departamenti, programi, specializimi, viti, semestri | **Informacion akademik** (me butonin "Lëndët e mia", që gjen lëndët e vitit dhe semestrit tënd) dhe **Asistent studimi** |
+| Student potencial | arsimi, interesat, fusha, niveli, objektivat | **Orientim për programet**, me motorin e rekomandimeve ("Gjej programet për profilin tim") |
+
+Të gjitha rrugët përfundojnë te RAG-u i njëjtë (`rag.py`). Për studentin aktual kërkimi kufizohet te dokumentet e programit të tij; profili i shtohet pyetjes dhe promptit. Llogaritë ruhen lokalisht te `users/users.json` (fjalëkalimet si hash scrypt). Është ruajtje për demonstrim, jo autentikim për prodhim.
+
+Testet (pa API): `pip install pytest` dhe pastaj `python -m pytest tests`.
 
 ## Si shtohen dokumente të reja
 

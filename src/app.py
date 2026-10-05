@@ -10,11 +10,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# Shumë serverë (p.sh. Streamlit Community Cloud) kanë SQLite të vjetër që ChromaDB
+# nuk e pranon. Nëse pysqlite3 është i instaluar, përdoret ai.
+try:
+    __import__("pysqlite3")
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass
+
 import streamlit as st  # noqa: E402
 
 import llm  # noqa: E402
 from student_profile import is_empty, new_profile, profile_to_text  # noqa: E402
 from advisor import Advisor  # noqa: E402
+from build_index import build_index  # noqa: E402
 from rag import KnowledgeBaseMissingError, RagAssistant  # noqa: E402
 
 PROGRAM_OPTIONS = ["Master Profesional", "Master Shkencor"]
@@ -32,12 +41,22 @@ st.markdown(
 
 @st.cache_resource(show_spinner="Duke ngarkuar bazën e njohurive...")
 def load_assistant() -> RagAssistant:
-    return RagAssistant()
+    try:
+        return RagAssistant()
+    except KnowledgeBaseMissingError:
+        # Serveri i ri nuk e ka bazën (chroma_db/ nuk ruhet te GitHub): ndërtohet
+        # vetë nga dokumentet te data/ herën e parë. Kërkon OPENAI_API_KEY.
+        with st.spinner("Duke ndërtuar bazën e njohurive nga dokumentet (vetëm herën e parë)..."):
+            build_index()
+        return RagAssistant()
 
 
 try:
     assistant = load_assistant()
     advisor = Advisor(assistant)
+except llm.MissingApiKeyError as error:
+    st.error(str(error))
+    st.stop()
 except KnowledgeBaseMissingError as error:
     st.error(
         f"{error}\n\nHap terminalin në dosjen kryesore të projektit dhe ekzekuto "

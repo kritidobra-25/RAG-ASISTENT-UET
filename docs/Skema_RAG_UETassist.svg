@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1290" viewBox="0 0 2000 1290">
+<defs><marker id="ah" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L12,6 L0,12 z" fill="#555555"/></marker></defs>
+<rect width="2000" height="1290" fill="#FFFFFF"/>
+<text x="1000.0" y="62" font-family="Liberation Sans, Arial, sans-serif" font-size="42" font-weight="bold" fill="#1F4E79" text-anchor="middle">Skema e procesit RAG të UETassist</text>
+<rect x="40" y="100" width="1920" height="360" rx="22" fill="#EEF3F9" stroke="#9DB4CF" stroke-width="2.5"/>
+<text x="70" y="146" font-family="Liberation Sans, Arial, sans-serif" font-size="28" font-weight="bold" fill="#1F4E79" text-anchor="start">FAZA A</text>
+<text x="180" y="146" font-family="Liberation Sans, Arial, sans-serif" font-size="26" font-weight="normal" fill="#222222" text-anchor="start">Ndërtimi i bazës së njohurive (një herë; përsëritet kur shtohen dokumente)</text>
+<rect x="70" y="175" width="300" height="255" rx="14" fill="#FFFFFF" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="220.0" y="217" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">1. Dokumentet</text>
+<line x1="92" y1="234" x2="348" y2="234" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="220.0" y="264" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">12 PDF programesh</text>
+<text x="220.0" y="293" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">(plane mësimore,</text>
+<text x="220.0" y="322" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">objektiva, profile)</text>
+<text x="220.0" y="351" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">+ materialet e</text>
+<text x="220.0" y="380" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">lëndëve (PDF, TXT)</text>
+<rect x="460" y="175" width="300" height="255" rx="14" fill="#FFFFFF" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="610.0" y="217" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">2. Leximi</text>
+<line x1="482" y1="234" x2="738" y2="234" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="610.0" y="264" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">Faqe për faqe me</text>
+<text x="610.0" y="293" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">pypdf; teksti</text>
+<text x="610.0" y="322" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">pastrohet nga</text>
+<text x="610.0" y="351" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">hapësirat e tepërta</text>
+<rect x="850" y="175" width="300" height="255" rx="14" fill="#FFFFFF" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="1000.0" y="217" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">3. Segmentimi</text>
+<line x1="872" y1="234" x2="1128" y2="234" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="1000.0" y="264" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">~700 karaktere,</text>
+<text x="1000.0" y="293" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">mbivendosje 100</text>
+<text x="1000.0" y="322" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">sipas rreshtave të</text>
+<text x="1000.0" y="351" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">plotë (një lëndë =</text>
+<text x="1000.0" y="380" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">një rresht)</text>
+<rect x="1240" y="175" width="300" height="255" rx="14" fill="#FFFFFF" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="1390.0" y="217" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">4. Embeddings</text>
+<line x1="1262" y1="234" x2="1518" y2="234" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="1390.0" y="264" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">text-embedding-3-</text>
+<text x="1390.0" y="293" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">small: çdo segment</text>
+<text x="1390.0" y="322" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">kthehet në vektor</text>
+<text x="1390.0" y="351" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">numerik; ruhen:</text>
+<text x="1390.0" y="380" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">dokumenti, faqja,</text>
+<text x="1390.0" y="409" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">programi, lënda</text>
+<rect x="1630" y="175" width="300" height="255" rx="14" fill="#DCE8F5" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="1780.0" y="217" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">5. ChromaDB</text>
+<line x1="1652" y1="234" x2="1908" y2="234" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="1780.0" y="264" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">Baza vektoriale</text>
+<text x="1780.0" y="293" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">139 segmente:</text>
+<text x="1780.0" y="322" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">111 nga programet,</text>
+<text x="1780.0" y="351" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">28 nga materialet</text>
+<line x1="376" y1="302.5" x2="454" y2="302.5" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<line x1="766" y1="302.5" x2="844" y2="302.5" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<line x1="1156" y1="302.5" x2="1234" y2="302.5" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<line x1="1546" y1="302.5" x2="1624" y2="302.5" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<rect x="40" y="540" width="1920" height="450" rx="22" fill="#F4F4F4" stroke="#B0B0B0" stroke-width="2.5"/>
+<text x="70" y="586" font-family="Liberation Sans, Arial, sans-serif" font-size="28" font-weight="bold" fill="#1F4E79" text-anchor="start">FAZA B</text>
+<text x="190" y="586" font-family="Liberation Sans, Arial, sans-serif" font-size="26" font-weight="normal" fill="#222222" text-anchor="start">Përgjigjja ndaj pyetjes (në kohë reale)</text>
+<rect x="70" y="620" width="280" height="340" rx="14" fill="#FFFFFF" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="210.0" y="662" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">Studenti</text>
+<line x1="92" y1="679" x2="328" y2="679" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="210.0" y="709" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">Pyetja në gjuhë</text>
+<text x="210.0" y="738" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">të natyrshme +</text>
+<text x="210.0" y="767" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">profili i ruajtur</text>
+<text x="210.0" y="796" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">(roli: aktual ose</text>
+<text x="210.0" y="825" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">potencial)</text>
+<rect x="386" y="620" width="280" height="340" rx="14" fill="#FFFFFF" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="526.0" y="662" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">Përpunimi</text>
+<text x="526.0" y="693" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">i mesazhit</text>
+<line x1="408" y1="710" x2="644" y2="710" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="526.0" y="740" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">Përshëndetjet pa</text>
+<text x="526.0" y="769" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">kërkim; klasifikimi</text>
+<text x="526.0" y="798" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">i qëllimit (15</text>
+<text x="526.0" y="827" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">kategori); profili</text>
+<text x="526.0" y="856" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">përditësohet; pyetja</text>
+<text x="526.0" y="885" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">rishkruhet me kontekst</text>
+<rect x="702" y="620" width="280" height="340" rx="14" fill="#FFFFFF" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="842.0" y="662" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">Kërkimi semantik</text>
+<line x1="724" y1="679" x2="960" y2="679" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="842.0" y="709" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">Pyetja → vektor;</text>
+<text x="842.0" y="738" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">5 segmentet më të</text>
+<text x="842.0" y="767" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">ngjashme nga</text>
+<text x="842.0" y="796" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">ChromaDB; filtër</text>
+<text x="842.0" y="825" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">sipas programit ose</text>
+<text x="842.0" y="854" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">lëndës</text>
+<rect x="1018" y="620" width="280" height="340" rx="14" fill="#FFFFFF" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="1158.0" y="662" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">Ndërtimi i</text>
+<text x="1158.0" y="693" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">kontekstit</text>
+<line x1="1040" y1="710" x2="1276" y2="710" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="1158.0" y="740" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">Segmentet me burimin</text>
+<text x="1158.0" y="769" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">dhe faqen +</text>
+<text x="1158.0" y="798" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">profili i studentit +</text>
+<text x="1158.0" y="827" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">udhëzimi i detyrës</text>
+<text x="1158.0" y="856" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">(rekomandim, quiz,</text>
+<text x="1158.0" y="885" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">përmbledhje...)</text>
+<rect x="1334" y="620" width="280" height="340" rx="14" fill="#FFF4D6" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="1474.0" y="662" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">Gjenerimi (LLM)</text>
+<line x1="1356" y1="679" x2="1592" y2="679" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="1474.0" y="709" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">gpt-4o-mini,</text>
+<text x="1474.0" y="738" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">temperaturë 0,2;</text>
+<text x="1474.0" y="767" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">përgjigjet vetëm</text>
+<text x="1474.0" y="796" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">nga konteksti, sipas</text>
+<text x="1474.0" y="825" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">rregullave të</text>
+<text x="1474.0" y="854" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">prompt-it</text>
+<rect x="1650" y="620" width="280" height="340" rx="14" fill="#E3F0E3" stroke="#1F4E79" stroke-width="2.5"/>
+<text x="1790.0" y="662" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">Përgjigja</text>
+<text x="1790.0" y="693" font-family="Liberation Sans, Arial, sans-serif" font-size="25" font-weight="bold" fill="#1F4E79" text-anchor="middle">me burime</text>
+<line x1="1672" y1="710" x2="1908" y2="710" stroke="#B7C7DA" stroke-width="1.5"/>
+<text x="1790.0" y="740" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">Pas-përpunimi: heq</text>
+<text x="1790.0" y="769" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">etiketat e brendshme;</text>
+<text x="1790.0" y="798" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">shton «Burimet»</text>
+<text x="1790.0" y="827" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">(titulli, faqja); frazë</text>
+<text x="1790.0" y="856" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">refuzimi kur mungon</text>
+<text x="1790.0" y="885" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#222222" text-anchor="middle">informacioni</text>
+<line x1="354" y1="790.0" x2="382" y2="790.0" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<line x1="670" y1="790.0" x2="698" y2="790.0" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<line x1="986" y1="790.0" x2="1014" y2="790.0" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<line x1="1302" y1="790.0" x2="1330" y2="790.0" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<line x1="1618" y1="790.0" x2="1646" y2="790.0" stroke="#555555" stroke-width="3.5" marker-end="url(#ah)"/>
+<polyline points="1780.0,432 1780.0,500 842.0,500 842.0,616" fill="none" stroke="#555555" stroke-width="3.5" stroke-dasharray="10 8" stroke-linejoin="round" marker-end="url(#ah)"/>
+<text x="1311.0" y="488" font-family="Liberation Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#555555" text-anchor="middle" font-style="italic">segmentet më të ngjashme (vektorë + metadata)</text>
+<text x="70" y="1042" font-family="Liberation Sans, Arial, sans-serif" font-size="26" font-weight="bold" fill="#1F4E79" text-anchor="start">Si ndryshon kërkimi sipas rrugës së përdoruesit</text>
+<rect x="70" y="1066" width="590" height="170" rx="14" fill="#FFFFFF" stroke="#9DB4CF" stroke-width="2"/>
+<text x="90" y="1104" font-family="Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#1F4E79" text-anchor="start">Student potencial</text>
+<text x="90" y="1142" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">Kërkimi kombinon pyetjen, profilin dhe pyetje</text>
+<text x="90" y="1172" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">shtesë (një për secilin program që krahasohet);</text>
+<text x="90" y="1202" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">deri në 12 segmente, radhazi nga secila pyetje.</text>
+<rect x="705" y="1066" width="590" height="170" rx="14" fill="#FFFFFF" stroke="#9DB4CF" stroke-width="2"/>
+<text x="725" y="1104" font-family="Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#1F4E79" text-anchor="start">Student aktual</text>
+<text x="725" y="1142" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">Kërkimi kufizohet te programi i studentit. Lëndët</text>
+<text x="725" y="1172" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">e semestrit vijnë nga plani mësimor i strukturuar</text>
+<text x="725" y="1202" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">(program, specializim, vit, semestër).</text>
+<rect x="1340" y="1066" width="590" height="170" rx="14" fill="#FFFFFF" stroke="#9DB4CF" stroke-width="2"/>
+<text x="1360" y="1104" font-family="Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#1F4E79" text-anchor="start">Study Mode</text>
+<text x="1360" y="1142" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">Fillimisht materialet e lëndës së zgjedhur, pastaj</text>
+<text x="1360" y="1172" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">dokumentet zyrtare të programit. Pa materiale,</text>
+<text x="1360" y="1202" font-family="Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#222222" text-anchor="start">përmbajtja e përgjithshme shënohet si e tillë.</text>
+</svg>

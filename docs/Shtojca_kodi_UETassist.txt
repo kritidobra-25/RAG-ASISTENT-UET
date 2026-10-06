@@ -698,7 +698,9 @@ def match_profile(curriculum: dict, program: str, specialization: str) -> str | 
     return None
 
 def courses_for(curriculum: dict, program: str, year: int, semester: int, specialization: str = "") -> list[dict]:
-    """Lëndët e planit për vitin dhe semestrin (1 ose 2 brenda vitit). Lëndët '1-2' hyjnë te të dy.
+    """Lëndët e planit për vitin dhe semestrin (1 ose 2 brenda vitit). Janë 4 semestra gjithsej:
+    2 te viti i parë dhe 2 te viti i dytë. Lëndët e vitit të plotë ('1-2', p.sh. Praktika dhe
+    Punimi i diplomës) numërohen vetëm te semestri i dytë i vitit.
 
     Nëse programi ka specializime te plani, kthehen lëndët e përbashkëta dhe ato të
     specializimit të zgjedhur. Pa specializim të njohur kthehen vetëm të përbashkëtat.
@@ -708,7 +710,7 @@ def courses_for(curriculum: dict, program: str, year: int, semester: int, specia
     return [
         c for c in courses
         if c["year"] == year
-        and c["semester"] in (str(semester), "1-2")
+        and (c["semester"] == str(semester) or (c["semester"] == "1-2" and semester == 2))
         and (not c.get("profile") or c["profile"] == chosen)
     ]
 ------------------------------------------------------------------------------

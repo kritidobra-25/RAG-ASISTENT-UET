@@ -1,0 +1,973 @@
+SHTOJCA A. KODI BURIMOR I ASISTENTIT INTELIGJENT UETassist
+=============================================================
+
+Ky skedar përmban copëzat kryesore të kodit burimor të sistemit, të nxjerra automatikisht nga
+skedarët e projektit, pa ndryshime. Kodi i plotë ndodhet te depoja GitHub:
+https://github.com/kritidobra-25/RAG-ASISTENT-UET
+
+Teknologjitë: Python 3, Streamlit (ndërfaqja), OpenAI API (gpt-4o-mini dhe text-embedding-3-small),
+ChromaDB (baza vektoriale), pypdf (leximi i PDF-ve), SQLite (llogaritë e përdoruesve).
+
+Përmbajtja:
+  A.1  Leximi i dokumenteve dhe ndarja në segmente (chunking)  (src/extract_and_chunk.py)
+  A.2  Kërkimi semantik në ChromaDB dhe gjenerimi i përgjigjes (RAG)  (src/rag.py)
+  A.3  Kontrolli i halucinimeve: prompt-i i sistemit dhe pastrimi i etiketave të brendshme  (src/rag.py)
+  A.4  Klasifikimi i qëllimit, nxjerrja e profilit dhe rishkrimi i pyetjes me kontekstin e bisedës  (src/intent.py)
+  A.5  Këshilltari akademik: orkestrimi i RAG, profilit dhe personalizimit  (src/advisor.py)
+  A.6  Profili i studentit: bashkimi iterativ dhe kontrolli i informacionit që mungon  (src/student_profile.py)
+  A.7  Plani mësimor i strukturuar nga tabelat e PDF-ve dhe identifikimi automatik i lëndëve  (src/curriculum.py)
+  A.8  Asistenti i studentit aktual dhe Study Mode  (src/student_assistant.py)
+  A.9  Atribuimi i burimeve  (src/sources.py)
+  A.10  Llogaritë e përdoruesve dhe siguria e fjalëkalimit  (src/accounts.py)
+
+
+==============================================================================
+A.1. Leximi i dokumenteve dhe ndarja në segmente (chunking)
+Skedari: src/extract_and_chunk.py
+==============================================================================
+
+Dokumentet PDF lexohen faqe për faqe me pypdf. Teksti ndahet në segmente prej
+rreth 700 karakteresh me mbivendosje 100 karakteresh. Ndarja bëhet sipas
+rreshtave të plotë, që një rresht i tabelës së planit mësimor (një lëndë) të
+mos priten në mes. Çdo segment fillon me emrin e programit dhe ruan dokumentin
+dhe numrin e faqes, që përgjigjet të citojnë burimin.
+
+------------------------------------------------------------------------------
+def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
+    """Ndan tekstin në segmente me madhësi afërsisht chunk_size karaktere.
+
+    Segmentet ndërtohen nga rreshta të plotë. Rreshtat e fundit të çdo
+    segmenti (deri në `overlap` karaktere) përsëriten në fillim të segmentit
+    pasardhës, që konteksti të mos humbasë në kufij.
+    """
+    # Rreshtat shumë të gjatë ndahen te hapësira më e afërt.
+    lines: list[str] = []
+    for line in text.split("\n"):
+        line = line.strip()
+        while len(line) > chunk_size:
+            cut = line.rfind(" ", 0, chunk_size)
+            if cut <= 0:
+                cut = chunk_size
+            lines.append(line[:cut].strip())
+            line = line[cut:].strip()
+        if line:
+            lines.append(line)
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_len = 0
+
+    for line in lines:
+        line_len = len(line) + 1
+        if current and current_len + line_len > chunk_size:
+            chunks.append("\n".join(current))
+            # Mbivendosja: mban rreshtat e fundit brenda kufirit `overlap`.
+            carry: list[str] = []
+            carry_len = 0
+            for previous in reversed(current):
+                if carry_len + len(previous) + 1 > overlap:
+                    break
+                carry.insert(0, previous)
+                carry_len += len(previous) + 1
+            current, current_len = carry, carry_len
+        current.append(line)
+        current_len += line_len
+
+    if current:
+        chunks.append("\n".join(current))
+    return chunks
+
+def load_and_chunk_all_pdfs(data_dir: Path = DATA_DIR) -> list[dict]:
+    """Lexon të gjitha PDF-të dhe skedarët .txt te data_dir dhe kthen segmentet.
+
+    Skedarët .txt shërbejnë për të shtuar tekst të korrigjuar me dorë (p.sh. një
+    tabelë që nuk nxirret mirë nga PDF-ja). Çdo element ka: id, text,
+    source (skedari), program, chunk_index.
+    """
+    data_dir = Path(data_dir)
+    all_chunks: list[dict] = []
+
+    files = sorted(
+        path for path in data_dir.iterdir() if path.suffix.lower() in {".pdf", ".txt"}
+    )
+    for path in files:
+        program = program_from_filename(path.name)
+        # Segmentet ndërtohen faqe për faqe, që çdo segment të ketë numrin e saktë të faqes.
+        index = 0
+        for page_number, page_text in extract_pages(path):
+            for piece in chunk_text(clean_text(page_text)):
+                all_chunks.append(
+                    {
+                        "id": f"{path.stem}_{index:03d}",
+                        "text": f"Programi: {program}\n{piece}",
+                        "source": path.name,
+                        "program": program,
+                        "chunk_index": index,
+                        "page": page_number,
+                        "doc_type": "program",
+                        "course": "",
+                        "title": program,
+                    }
+                )
+                index += 1
+        print(f"  {path.name}: {index} segmente  ({program})")
+    return all_chunks
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.2. Kërkimi semantik në ChromaDB dhe gjenerimi i përgjigjes (RAG)
+Skedari: src/rag.py
+==============================================================================
+
+Pyetja kthehet në vektor (OpenAI text-embedding-3-small) dhe merren segmentet
+më të ngjashme nga ChromaDB. Metoda retrieve_multi kërkon për disa pyetje dhe
+i bashkon rezultatet radhazi (round-robin), p.sh. një pyetje për secilin
+program që krahasohet. Metoda answer ndërton prompt-in me segmentet dhe e
+dërgon te modeli gjuhësor.
+
+------------------------------------------------------------------------------
+def retrieve(self, question: str, k: int = config.TOP_K, where: dict | None = None) -> list[dict]:
+    """Kthen k segmentet më të ngjashme semantikisht me pyetjen.
+
+    where: filtër opsional mbi metadatat (p.sh. {"program": ...} ose {"course": ...}).
+    """
+    vector = llm.embed_texts([question])[0]
+    count = self.collection.count()
+    if count == 0:
+        return []
+    try:
+        result = self.collection.query(
+            query_embeddings=[vector],
+            n_results=min(k, count),
+            include=["documents", "metadatas", "distances"],
+            **({"where": where} if where else {}),
+        )
+    except Exception:
+        if not where:
+            raise
+        return []  # filtri nuk përputhet (p.sh. baza e vjetër pa fushën e re): asnjë rezultat
+    chunks = []
+    for chunk_id, text, meta, distance in zip(
+        result["ids"][0], result["documents"][0], result["metadatas"][0], result["distances"][0]
+    ):
+        chunks.append(
+            {
+                "id": chunk_id,
+                "page": meta.get("page") or None,
+                "title": meta.get("title") or meta["program"],
+                "doc_type": meta.get("doc_type", "program"),
+                "course": meta.get("course", ""),
+                "text": text,
+                "program": meta["program"],
+                "source": meta["source"],
+                "distance": float(distance),
+            }
+        )
+    return chunks
+
+def retrieve_multi(self, queries: list[str], k: int = config.TOP_K, limit: int = 12, where: dict | None = None) -> list[dict]:
+    """Kërkon për disa pyetje dhe i bashkon segmentet pa dublikatë.
+
+    Merr radhazi nga lista e secilës pyetje (round-robin), që krahasimi i dy
+    programeve të marrë segmente nga të dyja, jo vetëm nga më i ngjashmi.
+    """
+    per_query = [self.retrieve(q, k, where) for q in queries if q.strip()]
+    merged, seen = [], set()
+    for rank in range(k):
+        for results in per_query:
+            if rank < len(results) and results[rank]["id"] not in seen:
+                seen.add(results[rank]["id"])
+                merged.append(results[rank])
+    return merged[:limit]
+
+@staticmethod
+def _build_context(chunks: list[dict]) -> str:
+    blocks = []
+    for chunk in chunks:
+        blocks.append(f"[Burimi: {citation(chunk)}]\n{chunk['text']}")
+    return "\n\n---\n\n".join(blocks)
+
+def answer(self, question: str, k: int = config.TOP_K, hint: str = "", where: dict | None = None, extra: str = "") -> dict:
+    """Përgjigjet një pyetjeje. Kthen përgjigjen, burimet dhe kohët e matura."""
+    started = time.perf_counter()
+    small_talk = is_small_talk(question)
+    # hint (p.sh. programi i studentit) pasuron vetëm kërkimin, jo pyetjen te prompti.
+    chunks = [] if small_talk else self.retrieve(f"{question}. {hint}" if hint else question, k, where)
+    retrieval_done = time.perf_counter()
+
+    if small_talk:
+        user_prompt = f"Mesazhi i studentit (bisedë e shkurtër, pa fragmente): {question}"
+    else:
+        user_prompt = (
+            f"Fragmentet e dokumenteve:\n\n{self._build_context(chunks)}\n\n"
+            + (f"{extra}\n\n" if extra else "")
+            + f"Pyetja e studentit: {question}"
+        )
+    text = sanitize_labels(llm.chat_completion(SYSTEM_PROMPT, user_prompt), chunks)
+    finished = time.perf_counter()
+
+    sources = []
+    by_key: dict[tuple[str, str], dict] = {}
+    for chunk in chunks:
+        title = chunk.get("title") or chunk["program"]
+        key = (title, chunk["source"])
+        if key not in by_key:
+            by_key[key] = {"program": title, "source": chunk["source"], "pages": [], "doc_type": chunk.get("doc_type", "program")}
+            sources.append(by_key[key])
+        if chunk.get("page") and chunk["page"] not in by_key[key]["pages"]:
+            by_key[key]["pages"].append(chunk["page"])
+
+    return {
+        "question": question,
+        "answer": text,
+        "refused": text.strip().startswith(REFUSAL_PREFIX),
+        "sources": sources,
+        "chunks": chunks,
+        "retrieval_seconds": retrieval_done - started,
+        "generation_seconds": finished - retrieval_done,
+        "total_seconds": finished - started,
+    }
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.3. Kontrolli i halucinimeve: prompt-i i sistemit dhe pastrimi i etiketave të brendshme
+Skedari: src/rag.py
+==============================================================================
+
+Prompt-i e detyron modelin të përgjigjet vetëm nga dokumentet, të citojë
+programin dhe faqen, dhe të përdorë një frazë të caktuar refuzimi kur
+informacioni mungon. Funksioni sanitize_labels heq nga përgjigjja çdo etiketë
+të brendshme të kërkimit (p.sh. Fragmenti 1, chunk, vector similarity score)
+dhe e zëvendëson me citimin e vërtetë të dokumentit.
+
+------------------------------------------------------------------------------
+REFUSAL_PREFIX = "Nuk e gjej këtë informacion në dokumentet e disponueshme."
+
+SYSTEM_PROMPT = f"""Je asistenti inteligjent i Universitetit Europian të Tiranës (UET) për studentët aktualë dhe kandidatët e mundshëm.
+Përgjigju VETËM duke u bazuar në fragmentet e dokumenteve zyrtare që jepen në mesazhin e përdoruesit.
+
+Rregullat:
+1. Mos përdor njohuri nga jashtë fragmenteve dhe mos shpik emra, numra, data apo kredite.
+2. Çdo fragment fillon me emrin e programit. Nëse pyetja përmend një program, përdor vetëm fragmentet e atij programi.
+3. Nëse pyetja nuk e specifikon programin dhe informacioni ndryshon mes programeve, trego përgjigjen për secilin program veç e veç.
+4. Nëse informacioni nuk gjendet në fragmente, fillo përgjigjen saktësisht me: "{REFUSAL_PREFIX}" dhe këshillo studentin të kontaktojë administratën e UET-së.
+5. Përgjigju në shqip, shkurt dhe qartë. Citimet: pas çdo fakti të rëndësishëm për UET-në shkruaj burimin në kllapa, p.sh. (Master i Shkencave në Inxhinieri Informatike, f. 1). Nëse faqja mungon, shkruaj "Burimi: emri i programit". Mos përmend kurrë etiketa të brendshme si "Fragmenti 1", "chunk" ose "kontekst", dhe mos shkruaj numra fragmentesh; thuaj "dokumentet". Për kredite ECTS, vit dhe semestër, përdor vlerat saktësisht siç shfaqen në fragmente.
+6. Përjashtim nga rregulli 4: nëse mesazhi është vetëm përshëndetje ose bisedë e shkurtër (p.sh. "përshëndetje", "si je", "faleminderit"), mos përdor frazën e refuzimit. Përgjigju shkurt dhe miqësisht dhe thuaji se mund ta ndihmosh me pyetje rreth programeve të studimit të UET-së, si profilet, lëndët, kreditet ECTS dhe mundësitë e punësimit. Pyetjet faktike që nuk gjenden në fragmente vazhdojnë të marrin përgjigjen e refuzimit.
+7. Nëse mesazhi përmban "Profili i studentit", përdore për të personalizuar përgjigjen: rendit sipas rëndësisë programet dhe lëndët që i përshtaten interesit, nivelit, eksperiencës, objektivit dhe preferencës së tij. Profili nuk është burim fakti: emrat e programeve, lëndët, kreditet ECTS dhe mundësitë e punësimit merren vetëm nga fragmentet. Nëse asnjë program nuk i përshtatet qartë profilit, thuaje hapur dhe trego programin më të afërt që gjendet në fragmente."""
+
+def citation(chunk: dict) -> str:
+    """Citimi i lexueshëm i një segmenti: 'Titulli, f. 3' ose vetëm titulli.
+
+    Titulli është emri i programit (dokumentet zyrtare) ose emri i skedarit (materialet e lëndëve).
+    """
+    title = chunk.get("title") or chunk["program"]
+    return f"{title}, f. {chunk['page']}" if chunk.get("page") else title
+
+def sanitize_labels(text: str, chunks: list[dict]) -> str:
+    """Zëvendëson etiketat e brendshme (p.sh. [Fragmenti 3]) me citimin e dokumentit."""
+
+    def replace(match: re.Match, wrap: bool) -> str:
+        numbers = [int(n) for n in re.findall(r"\d+", match.group(1))]
+        cites = list(dict.fromkeys(citation(chunks[n - 1]) for n in numbers if 1 <= n <= len(chunks)))
+        cites = [c for c in cites if "f. " in c or not any(o.startswith(c + ", f.") for o in cites)]
+        if not cites:
+            return ""
+        joined = "; ".join(cites)
+        return f"({joined})" if wrap else joined
+
+    text = _LABEL_GROUP.sub(lambda m: replace(m, True), text)
+    text = _LABEL_BARE.sub(lambda m: replace(m, False), text)
+    text = re.sub(r"\b(?:retrieved chunks?|chunks?)\b\s*\d*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"[\[\(]?\s*(?:vector\s+)?(?:similarity|distance|score|largësia)\s*(?:score)?\s*[:=]?\s*\d*\.?\d+\s*[\]\)]?", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\(\s*\)", "", text)
+    return re.sub(r"[ \t]+([.,;])", r"\1", text)
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.4. Klasifikimi i qëllimit, nxjerrja e profilit dhe rishkrimi i pyetjes me kontekstin e bisedës
+Skedari: src/intent.py
+==============================================================================
+
+Një thirrje e vetme JSON te modeli kthen: qëllimin e mesazhit (14 kategori),
+përditësimet e profilit të studentit, detyrën e studimit, lëndën e përmendur
+dhe pyetjen e rishkruar si pyetje të plotë me historinë e bisedës (p.sh. "Po
+REST?" pas një bisede për API-t). Nëse përgjigjja nuk është JSON i vlefshëm,
+sistemi bie te RAG standard.
+
+------------------------------------------------------------------------------
+INTENTS = {
+    "general_info": "pyetje e përgjithshme për UET-në",
+    "program_info": "informacion për një program studimi",
+    "course_info": "informacion për një lëndë",
+    "study_help": "ndihmë për lëndët e semestrit aktual ose për studimin (student aktual)",
+    "admission": "pranimi, kriteret, dokumentet",
+    "tuition_fees": "tarifat dhe pagesat",
+    "academic_calendar": "kalendari akademik, afatet",
+    "schedule": "orari i mësimit",
+    "career_opportunities": "mundësitë e punësimit pas një programi",
+    "program_comparison": "krahasim programesh ose 'cili program është më mirë për mua'",
+    "personalized_recommendation": "kërkon rekomandim të personalizuar programi ose lënde",
+    "skill_gap_analysis": "krahasim i aftësive aktuale me ato të kërkuara nga një objektiv",
+    "academic_pathway": "kërkon një rrugë akademike hap pas hapi",
+    "what_if": "skenar alternativ: 'po sikur të zgjedh X në vend të Y'",
+    "other": "çdo gjë tjetër",
+}
+
+PERSONALIZED_INTENTS = {
+    "program_comparison",
+    "personalized_recommendation",
+    "skill_gap_analysis",
+    "academic_pathway",
+    "what_if",
+}
+
+SYSTEM_PROMPT = """You analyze one message from a student talking to a university academic-advisor chatbot (Albanian university UET). Return ONLY a JSON object with exactly these keys:
+
+{
+  "intent": one of %s,
+  "profile_updates": {
+    "academic_background": string|null,   // e.g. "Bachelor in Business Administration"
+    "current_program": string|null,
+    "current_level": string|null,         // e.g. "Bachelor", "Master"
+    "desired_program": "Master Profesional"|"Master Shkencor"|null,  // only if the student says which type of Master they want
+    "technical_skills": [string],
+    "experience_level": {skill: "beginner"|"intermediate"|"advanced"},
+    "interests": [string],
+    "career_goal": string|null,
+    "preferred_area": string|null,        // e.g. "Technical / IT"
+    "preferred_specialization": string|null,
+    "existing_experience": string|null,
+    "improve_areas": [string]
+  },
+  "search_queries": [up to 3 short Albanian search strings for the university documents],
+  "standalone_question": string,  // the latest message rewritten as a complete question using the recent messages ("Po REST?" after a talk about APIs -> "Çfarë është REST në kontekstin e API-ve?"). Same language as the student. Equal to the message if it is already complete.
+  "study_task": "explain"|"question"|"quiz"|"exercises"|"flashcards"|"mock_exam"|"review_plan"|"summary"|"overview"|null,  // what the student wants to do with a course: explain a concept, ask a question, get a quiz / practice exercises / flashcards / a mock exam / a revision plan / a summary, or "overview" (what does a course cover, how many ECTS). null if not about studying a course.
+  "topic": string|null,           // the concept or topic the student names, e.g. "REST API", "JavaScript"
+  "course_mentioned": string|null, // a course name the student mentions, exactly as written
+  "asks_other_programs": boolean   // true ONLY if the student explicitly asks about other UET programs, comparing programs or switching programs
+}
+
+Rules:
+- profile_updates: include ONLY what the student explicitly states in the latest message or confirms from the conversation. Never guess or infer. Use null or [] when absent.
+- Use the existing profile and recent messages to resolve references like "that program" or "do it".
+- search_queries: program names, subjects or career areas worth looking up. For a comparison, one query per program. For a what-if, queries about the NEW target. Empty list for simple questions.
+- Personalized intents are only for requests that need the student's own situation. Plain factual questions are never personalized.""" % json.dumps(list(INTENTS))
+
+def analyze_turn(question: str, profile_text: str, history: list[dict] | None = None, role: str = "prospective") -> dict:
+    """Kthen {'intent', 'profile_updates', 'search_queries'}."""
+    recent = "\n".join(
+        f"{m['role']}: {m['content'][:300]}" for m in (history or [])[-6:]
+    )
+    user_prompt = (
+        f"Student type: {'current student' if role == 'current' else 'prospective student (not enrolled yet)'}\n\n"
+        f"Existing profile:\n{profile_text or '(empty)'}\n\n"
+        f"Recent messages:\n{recent or '(none)'}\n\n"
+        f"Latest student message:\n{question}"
+    )
+    try:
+        data = json.loads(llm.chat_json(SYSTEM_PROMPT, user_prompt))
+        if not isinstance(data, dict):
+            raise ValueError("not an object")
+    except (ValueError, TypeError):
+        return {
+            "intent": "other", "profile_updates": {}, "search_queries": [], "standalone_question": question,
+            "study_task": None, "topic": None, "course_mentioned": None, "asks_other_programs": False,
+        }
+
+    intent = data.get("intent") if data.get("intent") in INTENTS else "other"
+    updates = data.get("profile_updates") if isinstance(data.get("profile_updates"), dict) else {}
+    queries = data.get("search_queries") if isinstance(data.get("search_queries"), list) else []
+    standalone = data.get("standalone_question")
+    task = data.get("study_task")
+    return {
+        "intent": intent,
+        "profile_updates": updates,
+        "search_queries": [str(q) for q in queries if str(q).strip()][:3],
+        "standalone_question": standalone.strip() if isinstance(standalone, str) and standalone.strip() else question,
+        "study_task": task if task in STUDY_TASKS else None,
+        "topic": data.get("topic") if isinstance(data.get("topic"), str) and data["topic"].strip() else None,
+        "course_mentioned": data.get("course_mentioned") if isinstance(data.get("course_mentioned"), str) and data["course_mentioned"].strip() else None,
+        "asks_other_programs": data.get("asks_other_programs") is True,
+    }
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.5. Këshilltari akademik: orkestrimi i RAG, profilit dhe personalizimit
+Skedari: src/advisor.py
+==============================================================================
+
+Mbi RAG-un standard, metoda respond klasifikon mesazhin, përditëson profilin,
+bën pyetje ndjekëse vetëm kur mungon informacion i nevojshëm (maksimumi 2
+radhazi) dhe zgjedh rrugën: përshëndetje, pyetje faktike (RAG standard),
+studenti aktual (moduli i veçantë) ose rekomandim i personalizuar. Kërkimi i
+personalizuar kombinon pyetjen, profilin dhe pyetje shtesë.
+
+------------------------------------------------------------------------------
+MAX_FOLLOW_UPS = 2
+
+COMMON_RULES = """Rregulla shtesë për përgjigjet e personalizuara:
+- Faktet për UET-në (programe, lëndë, ECTS, profile, mundësi karriere) merren VETËM nga fragmentet dhe shoqërohen me burimin në kllapa, p.sh. (Emri i programit, f. 2), ose "Burimi: emri i programit" kur faqja mungon. Mos shpik programe, lëndë, tarifa, kushte pranimi apo mundësi karriere.
+- Profili i studentit nuk është burim fakti. Çdo gjykim që vjen nga profili, jo nga fragmentet, shënoje me "(interpretim)".
+- Nëse një pjesë e kërkuar nuk gjendet te fragmentet, shkruaj saktësisht: "Nuk e gjej këtë informacion në dokumentet e disponueshme." për atë pjesë dhe vazhdo me pjesët e tjera.
+- Mos përmend kurrë etiketa të brendshme si "Fragmenti 1", "chunk" ose "kontekst", dhe mos shkruaj numra fragmentesh. Thuaj "dokumentet" dhe cito vetëm emrin e programit dhe faqen.
+- Mos shkruaj seksionin "Burimet": shtohet automatikisht nga sistemi.
+- Mos jep pikë numerike ose përqindje. Për përshtatshmërinë përdor vetëm "e lartë", "e mesme", "e ulët" ose "pa të dhëna", me arsyetim nga fragmentet.
+- Përgjigju në shqip. Përdor titujt Markdown "##" saktësisht siç janë dhënë."""
+
+STRUCTURE = """## Rekomandimi
+[programi ose rruga e rekomanduar]
+
+## Pse i përshtatet profilit tënd
+[2 deri 4 pika; çdo pikë lidh një element të profilit me një fakt nga fragmentet, me burimin (Emri i programit, f. N)]
+
+## Lëndët përkatëse
+[lista e lëndëve nga fragmentet, me vit/semestër dhe ECTS kur shfaqen]
+
+## Boshllëqet e aftësive
+[shih udhëzimin për boshllëqet]
+
+## Rruga e sugjeruar
+[hapa të renditur]
+
+## Drejtimi i karrierës
+[vetëm mundësitë që përmenden te fragmentet për atë program]"""
+
+def respond(
+    self,
+    question: str,
+    profile: dict | None = None,
+    history: list[dict] | None = None,
+    followups_asked: int = 0,
+    role: str = "prospective",
+    academic: dict | None = None,
+    curriculum: dict | None = None,
+    study_course: str | None = None,
+    forced_task: str | None = None,
+    user_material: str = "",
+) -> dict:
+    """Përgjigjet një mesazhi. Kthen të njëjtat çelësa si RagAssistant.answer(),
+    plus: intent, profile (i përditësuar), profile_changes, follow_up (bool)."""
+    profile = profile if profile is not None else new_profile()
+
+    if is_small_talk(question):
+        return self._wrap(self.rag.answer(question), "small_talk", profile, [], False)
+
+    # Veprimet e shpejta të Study Mode (quiz, flashcards...) e dinë detyrën: pa thirrje klasifikimi.
+    if forced_task:
+        analysis = intent_module.neutral_analysis(question)
+    else:
+        analysis = intent_module.analyze_turn(question, profile_to_text(profile), history, role)
+    profile, changes = merge_profile(profile, analysis["profile_updates"])
+    intent = analysis["intent"]
+
+    # Studenti aktual: moduli i veçantë. Kthen None vetëm kur studenti kërkon qartë programe të tjera.
+    if role == "current":
+        reply = self.current.handle(
+            question, analysis, academic, curriculum or {}, history,
+            study_course=study_course, forced_task=forced_task, user_material=user_material, profile=profile,
+        )
+        if reply is not None:
+            return self._wrap(reply, intent, profile, changes, False)
+
+    if intent not in intent_module.PERSONALIZED_INTENTS:
+        return self._wrap(self.rag.answer(analysis["standalone_question"]), intent, profile, changes, False)
+
+    missing = missing_for(intent, profile)
+    if missing and followups_asked < MAX_FOLLOW_UPS:
+        reply = {
+            "question": question,
+            "answer": follow_up_question(missing),
+            "refused": False,
+            "sources": [],
+            "chunks": [],
+        }
+        return self._wrap(reply, intent, profile, changes, True)
+
+    return self._wrap(self._personalized(question, intent, profile, history, analysis), intent, profile, changes, False)
+
+def _personalized(self, question: str, intent: str, profile: dict, history: list[dict] | None, analysis: dict) -> dict:
+    queries = [f"{question}. {profile_to_query(profile)}".strip(". "), *analysis["search_queries"]]
+    chunks = self.rag.retrieve_multi(queries, k=config.TOP_K, limit=12)
+
+    recent = "\n".join(f"{m['role']}: {m['content'][:300]}" for m in (history or [])[-4:])
+    user_prompt = (
+        f"Fragmentet e dokumenteve:\n\n{self.rag._build_context(chunks)}\n\n"
+        f"Profili i studentit:\n{profile_to_text(profile) or '(bosh)'}\n\n"
+        + (f"Biseda e fundit:\n{recent}\n\n" if recent else "")
+        + f"{INTENT_INSTRUCTIONS[intent]}\n\n{COMMON_RULES}\n\n"
+        f"Pyetja e studentit: {question}"
+    )
+    text = sanitize_labels(llm.chat_completion(SYSTEM_PROMPT, user_prompt), chunks)
+    refused = text.strip().startswith(REFUSAL_PREFIX)
+    sources = [] if refused else attribute_sources(text, chunks)
+    if sources:
+        text += "\n\n" + format_sources(sources)
+    return {"question": question, "answer": text, "refused": refused, "sources": sources, "chunks": chunks}
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.6. Profili i studentit: bashkimi iterativ dhe kontrolli i informacionit që mungon
+Skedari: src/student_profile.py
+==============================================================================
+
+Profili ruan sfondin akademik, aftësitë me nivele, interesat, objektivin e
+karrierës etj. Përditësimet nga biseda bashkohen pa dublikatë: vlerat tekst
+mbishkruhen, listat zgjerohen, nivelet e aftësive përditësohen aftësi pas
+aftësie. Funksioni missing_for përcakton çfarë informacioni duhet kërkuar nga
+studenti sipas llojit të kërkesës.
+
+------------------------------------------------------------------------------
+def merge_profile(profile: dict | None, updates: dict | None) -> tuple[dict, list[str]]:
+    """Bashkon përditësimet në profil. Kthen (profili i ri, lista e ndryshimeve).
+
+    Vlerat tekst mbishkruhen nga e reja, listat zgjerohen pa dublikatë, fjalori
+    i niveleve përditësohet aftësi pas aftësie.
+    """
+    merged = copy.deepcopy(profile) if profile else new_profile()
+    changes: list[str] = []
+    for key, value in (updates or {}).items():
+        if value in (None, "", [], {}):
+            continue
+        if key in SCALAR_FIELDS and isinstance(value, str):
+            value = value.strip()
+            if value and value != merged.get(key):
+                merged[key] = value
+                changes.append(f"{SCALAR_FIELDS[key]}: {value}")
+        elif key in LIST_FIELDS and isinstance(value, list):
+            known = {item.lower() for item in merged[key]}
+            for item in value:
+                item = str(item).strip()
+                if item and item.lower() not in known:
+                    merged[key].append(item)
+                    known.add(item.lower())
+                    changes.append(f"{LIST_FIELDS[key]}: + {item}")
+        elif key in DICT_FIELDS and isinstance(value, dict):
+            for skill, level in value.items():
+                level = str(level).strip().lower()
+                if skill and level in LEVELS and merged[key].get(skill) != level:
+                    merged[key][skill] = level
+                    changes.append(f"{skill}: {LEVELS[level]}")
+    return merged, changes
+
+def missing_for(intent: str, profile: dict) -> list[str]:
+    """Çfarë informacioni mungon për këtë lloj kërkese: 'background', 'goal', 'skills'."""
+    missing = []
+    has_goal = any(profile.get(k) for k in ("career_goal", "preferred_specialization", "preferred_area")) or profile.get("interests")
+    has_background = any(profile.get(k) for k in ("academic_background", "current_program", "current_level"))
+    if intent != "what_if" and not has_goal:
+        missing.append("goal")
+    if intent != "program_comparison" and not has_background:
+        missing.append("background")
+    if intent == "skill_gap_analysis" and not (profile.get("technical_skills") or profile.get("experience_level")):
+        missing.append("skills")
+    return missing
+
+def follow_up_question(missing: list[str]) -> str:
+    parts = [FOLLOW_UP_PARTS[key] for key in missing[:2]]
+    return "Për të të rekomanduar një rrugë të përshtatshme, më trego " + " dhe ".join(parts) + "?"
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.7. Plani mësimor i strukturuar nga tabelat e PDF-ve dhe identifikimi automatik i lëndëve
+Skedari: src/curriculum.py
+==============================================================================
+
+Tabelat e planeve mësimore parsohen në të dhëna të strukturuara (program,
+kategori, vit, semestër, lëndë, ECTS, faqe, specializim). Funksioni validate
+krahason ECTS e parsuara me ato të deklaruara te tabela dhe shënon programet
+ku titujt e kategorive nuk janë të besueshëm. Funksioni courses_for kthen
+lëndët e një semestri sipas programit, specializimit, vitit dhe semestrit.
+
+------------------------------------------------------------------------------
+_ROW_WITH_YEAR = re.compile(r"^(\d+)\s+(II|I)\s+(1-2|1|2)\s+(.+?)\s+(\d+)\s*\**$")
+
+_ROW_NO_YEAR = re.compile(r"^(\d+)\s+(1-2|1|2)\s+(.+?)\s+(\d+)\s*\**$")
+
+_CATEGORY = re.compile(r"^\s*([A-E])\s*[-–]\s*(.+)$")
+
+def parse_pdf(path: Path) -> dict:
+    """Kthen {'courses', 'total_ects', 'stated': {kategoria: ECTS}, 'unparsed': [rreshta të pakuptuar]}."""
+    courses: list[dict] = []
+    unparsed: list[str] = []
+    stated: dict[str, int] = {}
+    total = None
+    category = None
+    group = 0
+    previous_nr = 0
+    elective = False
+    profile_title = None
+    program = program_from_filename(path.name)
+
+    for page_number, page in enumerate(PdfReader(str(path)).pages, start=1):
+        for raw in (page.extract_text() or "").split("\n"):
+            line = raw.strip()
+            if not line:
+                continue
+
+            match = _CATEGORY.match(line)
+            if match:
+                category = match.group(1).upper()
+                numbers = _STATED_ECTS.findall(match.group(2))
+                if numbers:
+                    stated[category] = int(numbers[-1])
+                group, previous_nr, elective, profile_title = 0, 0, False, None
+                continue
+            if _TOTAL.match(line):
+                total = int(_TOTAL.match(line).group(1))
+                continue
+            if _ELECTIVE_MARKER.search(line) and not line[0].isdigit():
+                elective = True
+                continue
+
+            row = _ROW_WITH_YEAR.match(line)
+            if row:
+                nr, year, semester, name, ects = row.groups()
+                year = 1 if year == "I" else 2
+            else:
+                row = _ROW_NO_YEAR.match(line)
+                if not row:
+                    if _LOOKS_LIKE_ROW.match(line):
+                        unparsed.append(f"f. {page_number}: {line}")
+                    elif _is_profile_title(line, category):
+                        profile_title = line
+                        group, previous_nr = group + 1, 0
+                    continue
+                nr, semester, name, ects = row.groups()
+                year = 1
+            if category is None:
+                continue
+            nr = int(nr)
+            if nr <= previous_nr:  # numërimi rifillon: grup i ri lëndësh (p.sh. profil ose zgjedhje)
+                group += 1
+            previous_nr = nr
+            courses.append(
+                {
+                    "program": program,
+                    "source": path.name,
+                    "page": page_number,
+                    "category": category,
+                    "category_label": CATEGORIES[category],
+                    "group": group,
+                    "elective": elective and category in {"B", "C"},
+                    "profile": profile_title if category == "C" else None,
+                    "year": year,
+                    "semester": semester,  # "1", "2" ose "1-2" (brenda vitit)
+                    "name": name.strip(),
+                    "ects": int(ects),
+                }
+            )
+    profiles = sorted({c["profile"] for c in courses if c["profile"]})
+    return {"courses": courses, "total_ects": total, "stated": stated, "unparsed": unparsed, "profiles": profiles}
+
+def _category_mismatches(data: dict) -> list[str]:
+    problems = []
+    for category, expected in data["stated"].items():
+        got = sum(c["ects"] for c in data["courses"] if c["category"] == category)
+        if category in ("A", "D", "E") and got != expected:
+            problems.append(f"kategoria {category} ka {got} ECTS të parsuara, deklarohen {expected}")
+        if category in ("B", "C") and got < expected:
+            problems.append(f"kategoria {category} ka vetëm {got} ECTS të parsuara, deklarohen {expected}")
+    return problems
+
+def validate(curriculum: dict) -> list[str]:
+    """Paralajmërimet për verifikim me dorë (kategori të pabesueshme, rreshta të pakuptuar)."""
+    warnings = []
+    for program, data in curriculum.items():
+        if not data["courses"]:
+            warnings.append(f"{program}: asnjë lëndë e parsuar")
+        if not data.get("category_reliable", True):
+            warnings.append(f"{program}: kategoritë A-E nuk janë të besueshme (titujt e tabelës janë në rend tjetër). Viti, semestri dhe ECTS janë nxjerrë, kategoria shënohet 'e papërcaktuar'")
+        for line in data.get("unparsed", []):
+            warnings.append(f"{program}: rresht i pakuptuar, shiko me dorë: {line}")
+    return warnings
+
+def match_profile(curriculum: dict, program: str, specialization: str) -> str | None:
+    """Specializimi i dhënuar nga studenti, i përputhur me një titull nga plani (ose None)."""
+    wanted = norm(specialization or "")
+    if not wanted:
+        return None
+    for title in profiles_for(curriculum, program):
+        if norm(title) == wanted or wanted in norm(title) or norm(title) in wanted:
+            return title
+    return None
+
+def courses_for(curriculum: dict, program: str, year: int, semester: int, specialization: str = "") -> list[dict]:
+    """Lëndët e planit për vitin dhe semestrin (1 ose 2 brenda vitit). Lëndët '1-2' hyjnë te të dy.
+
+    Nëse programi ka specializime te plani, kthehen lëndët e përbashkëta dhe ato të
+    specializimit të zgjedhur. Pa specializim të njohur kthehen vetëm të përbashkëtat.
+    """
+    courses = curriculum.get(program, {}).get("courses", [])
+    chosen = match_profile(curriculum, program, specialization)
+    return [
+        c for c in courses
+        if c["year"] == year
+        and c["semester"] in (str(semester), "1-2")
+        and (not c.get("profile") or c["profile"] == chosen)
+    ]
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.8. Asistenti i studentit aktual dhe Study Mode
+Skedari: src/student_assistant.py
+==============================================================================
+
+Moduli i veçantë për studentin aktual. Metoda handle përcakton lëndët e
+semestrit nga plani, kufizon kërkimin te programi i studentit dhe nuk
+rekomandon programe të tjera nëse nuk kërkohet qartë. Në Study Mode, metoda
+_study kërkon fillimisht te materialet e lëndës, pastaj te dokumentet zyrtare
+të programit, dhe ndërton detyrën e zgjedhur: shpjegim, quiz, ushtrime,
+flashcards, provim prove, plan përsëritjeje ose përmbledhje. Pa materiale të
+lëndës, përmbajtja e përgjithshme shënohet qartë si e tillë.
+
+------------------------------------------------------------------------------
+STUDY_SYSTEM_PROMPT = f"""Je asistenti akademik dhe i studimit i Universitetit Europian të Tiranës (UET) për studentët aktualë.
+
+Burimi i së vërtetës janë faktet zyrtare të lëndës, materialet e lëndës dhe dokumentet zyrtare që jepen në mesazh.
+Rregullat:
+1. Mos shpik informacion për lëndët: ECTS, tema të kurrikulës, përmbajtje, kërkesa për provime ose rregulla të universitetit. Nëse diçka nuk gjendet te burimet, thuaje hapur: "Nuk e gjej këtë informacion në burimet e disponueshme."
+2. Faktet për UET-në (lëndë, ECTS, vit, semestër, programi) merren vetëm nga faktet zyrtare dhe dokumentet. Cito burimin në kllapa, p.sh. (Titulli i burimit, f. 3). Nëse faqja mungon, shkruaj "Burimi: titulli".
+3. Quiz-et, ushtrimet, flashcards, përmbledhjet dhe provimet e provës bazohen kryesisht te materialet e lëndës dhe materiali i ngjitur nga studenti.
+4. Kur nuk ka materiale të lëndës, mund të shpjegosh një koncept të përgjithshëm që studenti e emërton, por duhet ta shënosh qartë në fillim: "Nuk kam materiale të lëndës në bazën e njohurive; kjo është përmbajtje e përgjithshme për temën, jo nga materialet e lëndës." Mos pretendo kurrë që është pjesë e lëndës ose e provimit.
+5. Mos rekomando programe të tjera të UET. Studenti është tashmë në programin e tij.
+6. Mos përmend kurrë etiketa të brendshme si "Fragmenti 1", "chunk", "kontekst" ose pikë ngjashmërie. Cito vetëm titullin e burimit dhe faqen.
+7. Përgjigju në shqip, qartë dhe në nivelin e studentit. Përdor Markdown ("##" për tituj, listë me pika)."""
+
+TASK_INSTRUCTIONS = {
+    "explain": "Detyra: shpjego konceptin hap pas hapi, thjesht, me një shembull. Nëse studenti kërkon 'më thjesht', thjeshto edhe më shumë.",
+    "question": "Detyra: përgjigju pyetjes së studentit.",
+    "overview": "Detyra: trego çfarë dihet për lëndën: ECTS, viti, semestri, kategoria dhe specializimi nga faktet zyrtare. Përshkrimin, temat dhe objektivat e të nxënit trego VETËM nëse gjenden te burimet; përndryshe shkruaj: 'Përshkrimi, temat dhe objektivat e të nxënit nuk janë të disponueshme në burimet e ngarkuara.'",
+    "quiz": "Detyra: krijo një quiz me 8 pyetje (përzierje: zgjedhje e shumëfishtë, E vërtetë/E gabuar, përgjigje e shkurtër). Pyetjet vijnë nga materiali. Jep përgjigjet në fund, nën titullin '## Përgjigjet', me arsyetim të shkurtër.",
+    "exercises": "Detyra: krijo 5 ushtrime praktike me vështirësi në rritje, nga materiali. Jep zgjidhjet në fund, nën titullin '## Zgjidhjet'.",
+    "flashcards": "Detyra: krijo 10 deri 15 flashcards nga materiali, secila në formatin:\n**Pyetje:** ...\n**Përgjigje:** ...",
+    "mock_exam": "Detyra: krijo një provim prove nga materiali me tri pjesë (pyetje teorike të shkurtra, zgjedhje e shumëfishtë, një problem ose rast praktik). Në fillim shkruaj: 'Ky është një model prove për ushtrim. Formati dhe kërkesat e provimit zyrtar nuk gjenden te dokumentet.' Mos jep pikë zyrtare. Jep përgjigjet në fund.",
+    "review_plan": "Detyra: krijo një plan përsëritjeje ditë pas dite (nëse studenti tha numrin e ditëve, përdore; përndryshe 7 ditë), vetëm me temat që gjenden te materiali. Për çdo ditë: temat dhe aktiviteti (lexim, ushtrime, vetëtestim).",
+    "summary": "Detyra: përgatit një përmbledhje të strukturuar të materialit (tituj dhe pika kryesore). Mos shto tema që nuk janë te materiali.",
+}
+
+def handle(
+    self,
+    question: str,
+    analysis: dict,
+    academic: dict | None,
+    curriculum: dict,
+    history: list[dict] | None = None,
+    study_course: str | None = None,
+    forced_task: str | None = None,
+    user_material: str = "",
+    profile: dict | None = None,
+) -> dict | None:
+    """Përgjigjet studentit aktual. Kthen None kur studenti kërkon qartë programe të tjera
+    (atëherë Advisor përdor rrjedhën e rekomandimit)."""
+    base = {"question": question, "refused": False, "sources": [], "chunks": []}
+    intent, task = analysis["intent"], forced_task or analysis.get("study_task")
+
+    if intent in {"personalized_recommendation", "academic_pathway", "program_comparison", "what_if"} and analysis.get("asks_other_programs") and not study_course:
+        return None
+
+    if not academic_complete(academic):
+        return {**base, "answer": "Për të të treguar lëndët e semestrit, plotëso te profili im akademik programin, vitin dhe semestrin."}
+
+    program, year, semester = academic["program"], int(academic["year"]), int(academic["semester"])
+    specialization = academic.get("specialization", "")
+    courses = curriculum_module.courses_for(curriculum, program, year, semester, specialization)
+    if not courses:
+        return {
+            **base,
+            "answer": f"Nuk gjej lëndë për {program}, viti {year}, semestri {semester} te plani mësimor i nxjerrë nga dokumentet. "
+            "Kontrollo vitin dhe semestrin te profili, ose pyet administratën e UET-së.",
+        }
+
+    # 1) Study Mode: lënda është zgjedhur te ndërfaqja.
+    course_name = None
+    if study_course:
+        course_name = curriculum_module.best_match(sorted({c["name"] for c in courses}), study_course) or study_course
+    # 2) Lënda e përmendur te mesazhi.
+    elif analysis.get("course_mentioned"):
+        course_name = curriculum_module.best_match(sorted({c["name"] for c in courses}), analysis["course_mentioned"])
+
+    if course_name:
+        return self._study(question, analysis, course_name, task or ("overview" if intent == "course_info" else "question"),
+                           academic, courses, curriculum, history, user_material, profile)
+
+    # 3) Detyrë mësimore pa lëndë të caktuar.
+    if task in CONTENT_TASKS or task == "explain":
+        names = "\n".join(f"{i}. {n}" for i, n in enumerate(sorted({c['name'] for c in courses}), start=1))
+        return {**base, "answer": f"Për ta bërë këtë, zgjidh një nga lëndët e semestrit te Study Mode ose shkruaj emrin e saj:\n\n{names}"}
+
+    # 4) Lëndët e semestrit dhe pyetjet e tjera akademike.
+    if intent in {"study_help", "course_info"}:
+        return self._semester_courses(question, analysis, academic, courses, curriculum_module.profiles_for(curriculum, program))
+
+    # 5) Informacion akademik: RAG standard i kufizuar te programi i studentit.
+    where = None if analysis.get("asks_other_programs") else {"program": program}
+    extra = f"Studenti është aktual te {program}. Mos rekomando programe të tjera të UET-së."
+    return self.rag.answer(analysis["standalone_question"], where=where, extra=extra)
+
+def _study(self, question, analysis, course_name, task, academic, courses, curriculum, history, user_material, profile) -> dict:
+    program = academic["program"]
+    rows = [c for c in courses if c["name"] == course_name]
+    facts = "\n".join(curriculum_module.course_facts(c) for c in rows) or f"{course_name}: nuk gjendet te plani i semestrit."
+    standalone = analysis["standalone_question"]
+    topic = analysis.get("topic")
+    user_material = (user_material or "").strip()[:6000]
+
+    # RAG: së pari materialet e lëndës, pastaj dokumentet zyrtare të programit.
+    material_where = {"$and": [{"doc_type": "material"}, {"course": course_name}]}
+    materials = self.rag.retrieve_multi([f"{standalone}. {course_name}"], k=config.TOP_K, limit=6, where=material_where)
+    official = self.rag.retrieve_multi([f"{course_name}. {standalone}"], k=3, limit=3, where={"program": program})
+    chunks = materials + [c for c in official if c["id"] not in {m["id"] for m in materials}]
+    has_material = bool(materials) or bool(user_material)
+
+    base = {"question": question, "refused": False, "sources": [], "chunks": chunks}
+    if task in CONTENT_TASKS and not has_material and not topic:
+        return {
+            **base,
+            "answer": f"Nuk kam materiale për lëndën {course_name} te baza e njohurive, ndaj nuk mund ta bazoj {TASK_LABELS[task]} te lënda. "
+            "Mund ta përgatis nëse më shkruan një temë (p.sh. \"REST API\") dhe do të jetë përmbajtje e përgjithshme, e shënuar si e tillë. "
+            "Ose ngjit materialin tënd te Study Mode. Materialet e lëndës mund të shtohen te dosja data/lendet.",
+        }
+
+    recent = "\n".join(f"{m['role']}: {m['content'][:300]}" for m in (history or [])[-6:])
+    parts = [
+        f"Lënda e zgjedhur: {course_name}",
+        f"Faktet zyrtare të lëndës (plani mësimor):\n{facts}",
+        f"Materialet e lëndës (burimi kryesor):\n{self.rag._build_context(materials)}" if materials else "Materialet e lëndës: asnjë material i gjetur te baza e njohurive për këtë lëndë.",
+        f"Dokumente zyrtare të programit:\n{self.rag._build_context([c for c in chunks if c not in materials])}" if len(chunks) > len(materials) else "",
+        f"Materiali i ngjitur nga studenti (përdoret si burim, cito si 'Materiali i studentit'):\n{user_material}" if user_material else "",
+        f"Profili akademik:\n{academic_to_text(academic)}",
+        f"Profili i studentit (përshtat nivelin e shpjegimit):\n{profile_to_text(profile)}" if profile_to_text(profile) else "",
+        f"Biseda e fundit:\n{recent}" if recent else "",
+        TASK_INSTRUCTIONS.get(task, TASK_INSTRUCTIONS["question"]),
+        (f"Tema e kërkuar nga studenti: {topic}" if topic else ""),
+        "" if has_material else f'Nuk ka materiale të lëndës. Përmbajtja e përgjithshme lejohet vetëm për temën e studentit dhe duhet të fillojë me: "Nuk kam materiale të lëndës {course_name} në bazën e njohurive; kjo është përmbajtje e përgjithshme për temën, jo nga materialet e lëndës."',
+        f"Pyetja e studentit (e plotësuar me kontekstin e bisedës): {standalone}",
+    ]
+    text = sanitize_labels(llm.chat_completion(STUDY_SYSTEM_PROMPT, "\n\n".join(p for p in parts if p)), chunks)
+    refused = text.strip().startswith(REFUSAL_PREFIX)
+
+    sources: list[dict] = []
+    if not refused:
+        sources = attribute_sources(text, chunks) if chunks else []
+        sources = [s for s in sources if s["doc_type"] == "material" or s["program"] in text]
+        plan_pages = sorted({c["page"] for c in rows if c.get("page")})
+        if rows and not any(s["program"] == program for s in sources):
+            sources.append({"program": program, "source": rows[0]["source"], "pages": plan_pages, "doc_type": "program"})
+        if user_material:
+            sources.append({"program": "Materiali i studentit", "source": "", "pages": [], "doc_type": "user"})
+    if sources:
+        text += "\n\n" + format_sources(sources)
+    return {"question": question, "answer": text, "refused": refused, "sources": sources, "chunks": chunks}
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.9. Atribuimi i burimeve
+Skedari: src/sources.py
+==============================================================================
+
+Burimet nxirren nga titujt që përgjigjja i citon dhe nga faqet e tyre, dhe
+shfaqen si "Burimi: titulli, faqja N". Asnjë ID ose etiketë e brendshme e
+kërkimit nuk ekspozohet te përdoruesi.
+
+------------------------------------------------------------------------------
+def attribute_sources(text: str, chunks: list[dict]) -> list[dict]:
+    """Burimet që përgjigjja i citon sipas titullit dhe faqes, p.sh. "(Titulli, f. 2)".
+
+    Nëse përgjigjja nuk emërton asnjë burim, kthehen deri në 3 burimet e para të kërkimit,
+    që lexuesi të mos mbetet pa kontekst. Çelësi "program" mban titullin (përputhshmëri me ndërfaqen).
+    """
+    first_source: dict[str, dict] = {}
+    for chunk in chunks:
+        first_source.setdefault(_title(chunk), chunk)
+    titles = [t for t in first_source if t in text] or list(first_source)[:3]
+
+    sources = []
+    for title in titles:
+        pages: list[int] = []
+        for match in re.finditer(re.escape(title) + r"\s*,?\s*(?:f\.|faqja|faqe)\s*(\d+(?:\s*(?:,|-|–)\s*\d+)*)", text):
+            pages += [int(n) for n in re.findall(r"\d+", match.group(1))]
+        sources.append(
+            {
+                "program": title,
+                "source": first_source[title]["source"],
+                "pages": sorted(set(pages)),
+                "doc_type": first_source[title].get("doc_type", "program"),
+            }
+        )
+    return sources
+
+def format_sources(sources: list[dict]) -> str:
+    lines = ["## Burimet"]
+    for entry in sources:
+        if entry["pages"]:
+            lines.append(f"- Burimi: {entry['program']}, faqja {', '.join(str(p) for p in entry['pages'])}")
+        else:
+            lines.append(f"- Burimi: {entry['program']}")
+    return "\n".join(lines)
+------------------------------------------------------------------------------
+
+
+==============================================================================
+A.10. Llogaritë e përdoruesve dhe siguria e fjalëkalimit
+Skedari: src/accounts.py
+==============================================================================
+
+Fjalëkalimet nuk ruhen kurrë si tekst: ruhen vetëm si hash PBKDF2-SHA256 me
+kripë të rastësishme (200 000 iterime). Krahasimi bëhet me hmac.compare_digest
+dhe hash-i llogaritet edhe kur përdoruesi nuk ekziston, që koha e përgjigjes
+të mos zbulojë nëse emri ekziston. Përdoret pseudonim, ndërsa biseda nuk
+ruhet.
+
+------------------------------------------------------------------------------
+_ITERATIONS = 200_000
+
+def _hash(password: str, salt: bytes) -> str:
+    return hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, _ITERATIONS).hex()
+
+def create_user(username: str, password: str, role: str) -> dict:
+    username = username.strip()
+    if not _USERNAME.match(username):
+        raise AccountError("Emri i përdoruesit duhet të ketë 3 deri 30 shkronja, numra ose . _ -")
+    if len(password) < 8:
+        raise AccountError("Fjalëkalimi duhet të ketë të paktën 8 karaktere.")
+    if role not in ROLES:
+        raise AccountError("Zgjidh llojin e studentit.")
+    salt = os.urandom(16)
+    try:
+        with closing(_connect()) as db, db:
+            cursor = db.execute(
+                "INSERT INTO users (username, password_hash, salt, role, profile, academic, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    username,
+                    _hash(password, salt),
+                    salt.hex(),
+                    role,
+                    json.dumps(new_profile()),
+                    json.dumps(new_academic()),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+    except sqlite3.IntegrityError as error:
+        raise AccountError("Ky emër përdoruesi është i zënë.") from error
+    return load_user(cursor.lastrowid)
+
+def authenticate(username: str, password: str) -> dict | None:
+    """Kthen përdoruesin nëse të dhënat janë të sakta, përndryshe None."""
+    with closing(_connect()) as db:
+        row = db.execute("SELECT * FROM users WHERE username = ?", (username.strip(),)).fetchone()
+    # Hash-i llogaritet edhe kur përdoruesi nuk ekziston, që koha e përgjigjes të mos e zbulojë.
+    salt = bytes.fromhex(row["salt"]) if row else b"\x00" * 16
+    candidate = _hash(password, salt)
+    if row and hmac.compare_digest(candidate, row["password_hash"]):
+        return _to_user(row)
+    time.sleep(0.5)  # ngadalëson provat e njëpasnjëshme
+    return None
+------------------------------------------------------------------------------

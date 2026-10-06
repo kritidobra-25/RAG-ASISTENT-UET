@@ -184,8 +184,7 @@ with st.sidebar:
     if role == "current":
         with st.expander("Profili im akademik", expanded=not academic.get("program")):
             st.caption(
-                "Programi, viti dhe semestri përdoren për të gjetur lëndët e semestrit nga plani mësimor. "
-                "Fakulteti, departamenti dhe specializimi nuk gjenden te dokumentet, prandaj i plotëson ti."
+                "Programi, viti dhe semestri përdoren për të gjetur lëndët e semestrit nga plani mësimor."
             )
             summary = academic_to_text(academic)
             st.markdown(summary if summary else "*Profili akademik është ende bosh.*")

@@ -291,7 +291,7 @@ A.4. Klasifikimi i qëllimit, nxjerrja e profilit dhe rishkrimi i pyetjes me kon
 Skedari: src/intent.py
 ==============================================================================
 
-Një thirrje e vetme JSON te modeli kthen: qëllimin e mesazhit (14 kategori),
+Një thirrje e vetme JSON te modeli kthen: qëllimin e mesazhit (15 kategori),
 përditësimet e profilit të studentit, detyrën e studimit, lëndën e përmendur
 dhe pyetjen e rishkruar si pyetje të plotë me historinë e bisedës (p.sh. "Po
 REST?" pas një bisede për API-t). Nëse përgjigjja nuk është JSON i vlefshëm,

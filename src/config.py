@@ -36,3 +36,4 @@ EMBED_BATCH_SIZE = 64                                   # segmente për një thi
 # Llogaritë e përdoruesve (SQLite) dhe plani mësimor i strukturuar
 USERS_DB = ROOT / "users.sqlite3"                   # krijohet vetë; nuk shkon te GitHub
 CURRICULUM_PATH = DATA_DIR / "curriculum.json"      # krijohet nga build_curriculum.py
+CORRECTIONS_PATH = DATA_DIR / "curriculum_korrigjime.json"  # korrigjime të shënuara të planit (opsionale)

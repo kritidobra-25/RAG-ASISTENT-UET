@@ -16,7 +16,10 @@ if __name__ == "__main__":
         sys.stdout.reconfigure(encoding="utf-8")
     data = curriculum.build()
     path = curriculum.save(data)
-    print(f"U ruajt: {path}")
+    for program, info in data.items():
+        for course in info["courses"]:
+            if course.get("corrected"):
+                print(f"  [korrigjim] {course['name']} ({program}): {course['original']} -> viti {course['year']}, semestri {course['semester']}")
     for program, info in data.items():
         by_sem: dict[tuple, int] = {}
         for c in info["courses"]:

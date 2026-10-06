@@ -135,6 +135,37 @@ def parse_pdf(path: Path) -> dict:
     return {"courses": courses, "total_ects": total, "stated": stated, "unparsed": unparsed, "profiles": profiles}
 
 
+def apply_corrections(curriculum: dict, path: Path | None = None) -> list[str]:
+    """Zbaton korrigjimet e shënuara te data/curriculum_korrigjime.json mbi planin e parsuar.
+
+    Përdoret kur plani aktual dallon nga dokumenti PDF. Çdo korrigjim ka programin, lëndën
+    (dhe opsionalisht specializimin), fushat që ndryshojnë dhe arsyen. Lënda ruan vlerat
+    origjinale të dokumentit dhe shënohet 'corrected', që ndryshimi të mbetet i dukshëm.
+    Kthen mesazhet për verifikim (korrigjime të zbatuara ose pa përputhje).
+    """
+    path = Path(path or config.CORRECTIONS_PATH)
+    if not path.exists():
+        return []
+    messages = []
+    for item in json.loads(path.read_text(encoding="utf-8")):
+        courses = curriculum.get(item["program"], {}).get("courses", [])
+        matches = [
+            c for c in courses
+            if c["name"] == item["course"] and (not item.get("profile") or c.get("profile") == item["profile"])
+        ]
+        if not matches:
+            messages.append(f"Korrigjim pa përputhje (kontrollo emrat): {item['program']} / {item['course']}")
+            continue
+        for course in matches:
+            course["original"] = {key: course[key] for key in item["set"]}
+            course.update(item["set"])
+            course["semester"] = str(course["semester"])
+            course["corrected"] = True
+            course["correction_note"] = item.get("note", "")
+        messages.append(f"Korrigjim i zbatuar: {item['course']} ({item['program']}): {matches[0]['original']} -> {item['set']}")
+    return messages
+
+
 def build(data_dir: Path | None = None) -> dict:
     """Parson të gjitha PDF-të dhe kthen {program: {...}}."""
     data_dir = Path(data_dir or config.DATA_DIR)
@@ -153,6 +184,7 @@ def build(data_dir: Path | None = None) -> dict:
                 course["profile"] = None
             parsed["profiles"] = []
         result[program_from_filename(path.name)] = {"source": path.name, **parsed}
+    apply_corrections(result)
     return result
 
 
@@ -269,9 +301,13 @@ def course_facts(course: dict) -> str:
     """Faktet zyrtare të një lënde nga plani, për prompt dhe për shfaqje."""
     semester = "viti i plotë (semestri 1-2)" if course["semester"] == "1-2" else f"semestri {course['semester']}"
     profile = f"; specializimi: {course['profile']}" if course.get("profile") else ""
+    correction = ""
+    if course.get("corrected"):
+        was = course["original"]
+        correction = f" (SHËNIM KORRIGJIMI: dokumenti PDF tregon viti {was.get('year', course['year'])}, semestri {was.get('semester', course['semester'])}; vlera e mësipërme është plani i konfirmuar)"
     return (
         f"{course['name']}: {course['ects']} ECTS; viti {course['year']}, {semester}; "
-        f"{course['category_label'].lower()}{profile} [{course['program']}, f. {course['page']}]"
+        f"{course['category_label'].lower()}{profile}{correction} [{course['program']}, f. {course['page']}]"
     )
 
 

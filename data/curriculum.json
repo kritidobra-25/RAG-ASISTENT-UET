@@ -2893,9 +2893,15 @@
     "elective": false,
     "profile": "IT e biznesit",
     "year": 2,
-    "semester": "2",
+    "semester": "1",
     "name": "Menaxhim financiar",
-    "ects": 6
+    "ects": 6,
+    "original": {
+     "year": 2,
+     "semester": "2"
+    },
+    "corrected": true,
+    "correction_note": "Dokumenti PDF e tregon këtë lëndë në Vitin II, semestri 2. Plani i konfirmuar nga autori i sistemit: Viti II, semestri 1."
    },
    {
     "program": "Master i Shkencave në Teknologji Informacioni",

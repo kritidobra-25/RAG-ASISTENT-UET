@@ -738,9 +738,10 @@ Rregullat:
 2. Faktet për UET-në (lëndë, ECTS, vit, semestër, programi) merren vetëm nga faktet zyrtare dhe dokumentet. Cito burimin në kllapa, p.sh. (Titulli i burimit, f. 3). Nëse faqja mungon, shkruaj "Burimi: titulli".
 3. Quiz-et, ushtrimet, flashcards, përmbledhjet dhe provimet e provës bazohen kryesisht te materialet e lëndës dhe materiali i ngjitur nga studenti.
 4. Kur nuk ka materiale të lëndës, mund të shpjegosh një koncept të përgjithshëm që studenti e emërton, por duhet ta shënosh qartë në fillim: "Nuk kam materiale të lëndës në bazën e njohurive; kjo është përmbajtje e përgjithshme për temën, jo nga materialet e lëndës." Mos pretendo kurrë që është pjesë e lëndës ose e provimit.
-5. Mos rekomando programe të tjera të UET. Studenti është tashmë në programin e tij.
-6. Mos përmend kurrë etiketa të brendshme si "Fragmenti 1", "chunk", "kontekst" ose pikë ngjashmërie. Cito vetëm titullin e burimit dhe faqen.
-7. Përgjigju në shqip, qartë dhe në nivelin e studentit. Përdor Markdown ("##" për tituj, listë me pika)."""
+5. Nëse faktet e një lënde kanë "SHËNIM KORRIGJIMI", vlera e planit të konfirmuar ka përparësi mbi tekstin e PDF-së. Përmende shënimin vetëm kur studenti pyet për vitin ose semestrin e asaj lënde.
+6. Mos rekomando programe të tjera të UET. Studenti është tashmë në programin e tij.
+7. Mos përmend kurrë etiketa të brendshme si "Fragmenti 1", "chunk", "kontekst" ose pikë ngjashmërie. Cito vetëm titullin e burimit dhe faqen.
+8. Përgjigju në shqip, qartë dhe në nivelin e studentit. Përdor Markdown ("##" për tituj, listë me pika)."""
 
 TASK_INSTRUCTIONS = {
     "explain": "Detyra: shpjego konceptin hap pas hapi, thjesht, me një shembull. Nëse studenti kërkon 'më thjesht', thjeshto edhe më shumë.",

@@ -158,3 +158,4 @@ Mbi RAG-un ekzistues, `src/advisor.py` shton një këshilltar akademik:
 - **Konteksti i bisedës:** pyetja rishkruhet si pyetje e plotë me historinë ("Po REST?" pas "Çfarë është API?") para kërkimit.
 - **Studenti aktual nuk merr rekomandime për programe të tjera**, përveç kur i kërkon qartë. Kërkimi i tij kufizohet te programi i vet.
 - **Moduli:** `src/student_assistant.py`, i pavarur nga rruga e studentit potencial (`src/advisor.py`).
+- **Korrigjimet e planit:** nëse plani aktual dallon nga dokumenti PDF, ndryshimi shënohet te `data/curriculum_korrigjime.json` (program, lëndë, vlerat e reja dhe arsyeja). `build_curriculum.py` i zbaton dhe i printon, lënda ruan vlerat origjinale të PDF-së dhe shënohet si e korrigjuar. Përgjigjet nga teksti i PDF-së (RAG i zakonshëm) vazhdojnë të lexojnë dokumentin origjinal.

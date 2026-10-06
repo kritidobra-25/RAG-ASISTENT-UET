@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="360" viewBox="0 0 880 360">
+<defs><marker id="ah" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L14,7 L0,14 z" fill="#000"/></marker></defs>
+<rect width="880" height="360" fill="#fff"/>
+<rect x="20" y="30" width="370" height="105" rx="22" fill="#fff" stroke="#000" stroke-width="3.5"/>
+<text x="205.0" y="75.0" font-family="Liberation Serif, Times New Roman, serif" font-size="25" text-anchor="middle" fill="#000">Përmbledhje e pyetjeve</text>
+<text x="205.0" y="106.0" font-family="Liberation Serif, Times New Roman, serif" font-size="25" text-anchor="middle" fill="#000">të studentëve</text>
+<path d="M575,22 L835,22 L835,140 C770.0,120 736.2,162 673.8,142 C627.0,128 601.0,158 575,144 Z" fill="#fff" stroke="#000" stroke-width="3"/>
+<path d="M560,34 L820,34 L820,152 C755.0,132 721.2,174 658.8,154 C612.0,140 586.0,170 560,156 Z" fill="#fff" stroke="#000" stroke-width="3"/>
+<path d="M545,46 L805,46 L805,164 C740.0,144 706.2,186 643.8,166 C597.0,152 571.0,182 545,168 Z" fill="#fff" stroke="#000" stroke-width="3"/>
+<text x="675.0" y="88" font-family="Liberation Serif, Times New Roman, serif" font-size="24" text-anchor="middle" fill="#000">Kërkimi i dokumenteve</text>
+<text x="675.0" y="118" font-family="Liberation Serif, Times New Roman, serif" font-size="24" text-anchor="middle" fill="#000">Përpunimi paraprak</text>
+<text x="675.0" y="148" font-family="Liberation Serif, Times New Roman, serif" font-size="24" text-anchor="middle" fill="#000">i të dhënave</text>
+<polyline points="392,82 542,82" fill="none" stroke="#000" stroke-width="2.2" marker-end="url(#ah)"/>
+<polyline points="545,150 440,150 440,205 215,205 215,247" fill="none" stroke="#000" stroke-width="2.2" marker-end="url(#ah)"/>
+<rect x="40" y="250" width="350" height="100" rx="22" fill="#fff" stroke="#000" stroke-width="3.5"/>
+<text x="215.0" y="292.5" font-family="Liberation Serif, Times New Roman, serif" font-size="25" text-anchor="middle" fill="#000">Gjenerimi i përgjigjeve</text>
+<text x="215.0" y="323.5" font-family="Liberation Serif, Times New Roman, serif" font-size="25" text-anchor="middle" fill="#000">me RAG dhe LLM</text>
+<rect x="500" y="250" width="320" height="100" rx="22" fill="#fff" stroke="#000" stroke-width="3.5"/>
+<text x="660.0" y="292.5" font-family="Liberation Serif, Times New Roman, serif" font-size="25" text-anchor="middle" fill="#000">Vlerësimi dhe krahasimi</text>
+<text x="660.0" y="323.5" font-family="Liberation Serif, Times New Roman, serif" font-size="25" text-anchor="middle" fill="#000">i modelit</text>
+<polyline points="392,300 498,300" fill="none" stroke="#000" stroke-width="2.2" marker-end="url(#ah)"/>
+</svg>

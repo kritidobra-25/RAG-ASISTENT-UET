@@ -331,7 +331,7 @@ def current_student_panel() -> list[dict]:
 
     # Lista e lëndëve me ECTS
     with st.expander(f"Lëndët e semestrit ({len(names)})", expanded=not st.session_state.get("study_course")):
-        for course in sorted(courses, key=lambda c: c["name"]):
+        for course in sorted(curriculum.unique_courses(courses), key=lambda c: c["name"]):
             st.markdown(f"- {course['name']}, {course['ects']} ECTS")
         if curriculum.profiles_for(curriculum_data, academic["program"]) and not curriculum.match_profile(curriculum_data, academic["program"], academic.get("specialization", "")):
             st.caption("Lëndët e specializimit nuk shfaqen, sepse specializimi nuk është zgjedhur te profili.")

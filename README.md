@@ -159,3 +159,9 @@ Mbi RAG-un ekzistues, `src/advisor.py` shton një këshilltar akademik:
 - **Studenti aktual nuk merr rekomandime për programe të tjera**, përveç kur i kërkon qartë. Kërkimi i tij kufizohet te programi i vet.
 - **Moduli:** `src/student_assistant.py`, i pavarur nga rruga e studentit potencial (`src/advisor.py`).
 - **Korrigjimet e planit:** nëse plani aktual dallon nga dokumenti PDF, ndryshimi shënohet te `data/curriculum_korrigjime.json` (program, lëndë, vlerat e reja dhe arsyeja). `build_curriculum.py` i zbaton dhe i printon, lënda ruan vlerat origjinale të PDF-së dhe shënohet si e korrigjuar. Përgjigjet nga teksti i PDF-së (RAG i zakonshëm) vazhdojnë të lexojnë dokumentin origjinal.
+
+## Vlerësimi (`src/evaluate.py`)
+
+- **Pyetjet:** `eval/test_questions.csv` ka 56 pyetje në dy rrugë: `rag` (rrjedha bazë, 28) dhe `asistent` (rrjedha e plotë e aplikacionit, 28). Kolonat shtesë: `profili`, `lenda_study`, `detyra` dhe `pyetja_paraprake` (bisedë me dy hapa).
+- **Profilet testuese:** `eval/test_profiles.json` ka 3 profile studenti potencial dhe 3 profile studenti aktual.
+- **Ekzekutimi:** `python src/evaluate.py`, ose `python src/evaluate.py --ids 26-35` për disa pyetje. Rezultatet ruhen te `eval/rezultatet.csv`. Pastaj plotëso dorazi kolonat `vleresimi`, `burimi_mbeshtet`, `halucinacion` dhe `personalizim`.

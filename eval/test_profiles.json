@@ -1,0 +1,59 @@
+{
+  "P_DATA": {
+    "pershkrimi": "Student potencial: Bachelor në Administrim Biznesi, SQL dhe Python, objektivi Data Engineer",
+    "role": "prospective",
+    "profile": {
+      "academic_background": "Bachelor në Administrim Biznesi",
+      "career_goal": "Data Engineer",
+      "technical_skills": ["SQL", "Python"],
+      "interests": ["të dhëna", "IT"]
+    }
+  },
+  "P_FIN": {
+    "pershkrimi": "Student potencial: Bachelor në Ekonomi, objektivi analist rreziku në bankë",
+    "role": "prospective",
+    "profile": {
+      "academic_background": "Bachelor në Ekonomi",
+      "career_goal": "Analist rreziku në bankë",
+      "interests": ["financë", "banka"]
+    }
+  },
+  "P_BOSH": {
+    "pershkrimi": "Student potencial me profil bosh (teston pyetjet ndjekëse)",
+    "role": "prospective",
+    "profile": {}
+  },
+  "A_TI_Y2S2": {
+    "pershkrimi": "Student aktual: MSc Teknologji Informacioni, IT e biznesit, viti 2, semestri 2",
+    "role": "current",
+    "profile": {},
+    "academic": {
+      "program": "Master i Shkencave në Teknologji Informacioni",
+      "specialization": "IT e biznesit",
+      "year": 2,
+      "semester": 2
+    }
+  },
+  "A_TI_Y1S1": {
+    "pershkrimi": "Student aktual: MSc Teknologji Informacioni, IT e biznesit, viti 1, semestri 1",
+    "role": "current",
+    "profile": {},
+    "academic": {
+      "program": "Master i Shkencave në Teknologji Informacioni",
+      "specialization": "IT e biznesit",
+      "year": 1,
+      "semester": 1
+    }
+  },
+  "A_FIN_Y1S2": {
+    "pershkrimi": "Student aktual: MSH Financë, pa specializim të zgjedhur, viti 1, semestri 2",
+    "role": "current",
+    "profile": {},
+    "academic": {
+      "program": "Master i Shkencave në Financë",
+      "specialization": "",
+      "year": 1,
+      "semester": 2
+    }
+  }
+}

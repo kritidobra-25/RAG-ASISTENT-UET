@@ -1,26 +1,57 @@
-id,kategoria,pyetja,pergjigja_e_pritur,brenda_korpusit
-1,programe_profile,Cilat janë profilet e Master Shkencor në Inxhinieri Ndërtimi?,Inxhinieri Strukturash dhe Infrastrukturë Transporti,po
-2,programe_profile,Cilat janë profilet e Master Shkencor në Inxhinieri Mekanike?,Energjitikë dhe Infrastrukturë Transporti,po
-3,programe_profile,Cilat janë profilet e Master Shkencor në Inxhinieri Elektrike?,Energjetikë dhe Automatizim-Industri,po
-4,programe_profile,Cilat janë profilet e Master Shkencor në Teknologji Informacioni?,Zhvillim Softweresh; IT e biznesit; Menaxhim dhe Vlerësim Projektesh; Inovacion,po
-5,programe_profile,Cilat janë profilet e Master Shkencor në Inxhinieri Informatike?,Inxhinieri Softwere-sh; Siguria e sistemeve të informacionit; Menaxhim të dhënash; Dizenjim dhe zhvillim aplikimesh,po
-6,lende_kredite,Sa ECTS ka lënda Inteligjenca artificiale në Master Inxhinieri Informatike?,6 ECTS; viti II; semestri 1,po
-7,lende_kredite,Në cilin vit dhe semestër jepet Metoda kërkimi në inxhinieri te Master Inxhinieri Ndërtimi?,Viti II; semestri 1 (6 ECTS),po
-8,lende_kredite,Në cilin vit dhe semestër jepet Metoda kërkimi në inxhinieri te Master Inxhinieri Informatike?,Viti I; semestri 1 (6 ECTS),po
-9,lende_kredite,Sa ECTS ka Punimi i diplomës te Master Inxhinieri Elektrike?,24 ECTS,po
-10,lende_kredite,Sa ECTS ka Punimi i diplomës te Master Inxhinieri Ndërtimi?,28 ECTS,po
-11,lende_kredite,Sa ECTS ka Mekanika e Dherave Shkembit dhe Themeleve në Inxhinieri Ndërtimi?,10 ECTS; viti I; semestri 1,po
-12,lende_kredite,Sa ECTS ka lënda Zhvillim Webi: aplikime dhe programim në Teknologji Informacioni?,10 ECTS; viti II; semestri 2,po
-13,lende_kredite,Sa ECTS ka Praktika profesionale te Master Inxhinieri Mekanike?,12 ECTS,po
-14,lende_kredite,A është Inteligjenca artificiale lëndë profili te Master Teknologji Informacioni?,Po; te profili Zhvillim Softweresh; 6 ECTS; viti II; semestri 1,po
-15,lende_kredite,Cilat lëndë ka profili Siguria e sistemeve të informacionit në Inxhinieri Informatike?,Kontrolli dhe auditimi i sigurisë në rrjetat kompjuterike; Menaxhimi i riskut në IT; Kriptografia dhe Ethical Hacking,po
-16,lende_kredite,Sa ECTS ka Menaxhimi i Rrjetave Kompjuterike në Inxhinieri Informatike?,10 ECTS; viti I; semestri 2,po
-17,punesim,Cilat janë mundësitë e punësimit pas Master në Inxhinieri Ndërtimi?,Inxhinier projektues; ekspert ndërtimi; inspektor ndërtimi; inxhinier strukturash; inxhinier i infrastrukturës së transportit,po
-18,punesim,Çfarë profesionesh mund të ushtrojë një i diplomuar në Master Inxhinieri Mekanike?,Menaxher strategjik projektesh industriale; inxhinier i sistemeve industriale; konsulent ndërkombëtar; inxhinier për parqe energjetike,po
-19,punesim,Në cilat sektorë mund të punësohet një inxhinier elektrik me Master Shkencor?,Prodhim dhe shpërndarje energjie; industri mekanike dhe transporti; prodhim dhe mirëmbajtje; administratë publike; këshillim,po
-20,punesim,A mund të pajiset me licencë një i diplomuar në Master Inxhinieri Ndërtimi?,Po; sipas kuadrit ligjor në fuqi,po
-21,jashte_korpusit,Sa është tarifa vjetore e programit Master në Teknologji Informacioni?,Nuk ka përgjigje në dokumente,jo
-22,jashte_korpusit,Deri kur është afati i aplikimit për vitin akademik të ri?,Nuk ka përgjigje në dokumente,jo
-23,jashte_korpusit,Cili është orari i mësimit për semestrin e parë?,Nuk ka përgjigje në dokumente,jo
-24,jashte_korpusit,Si mund të kontaktoj koordinatorin e programit?,Nuk ka përgjigje në dokumente,jo
-25,jashte_korpusit,Cilat janë kriteret e pranimit në Bachelor në Drejtësi?,Nuk ka përgjigje në dokumente,jo
+﻿id,kategoria,rruga,profili,lenda_study,detyra,pyetja_paraprake,pyetja,pergjigja_e_pritur,brenda_korpusit
+1,programe_profile,rag,,,,,Cilat janë profilet e Master Shkencor në Inxhinieri Ndërtimi?,Inxhinieri Strukturash dhe Infrastrukturë Transporti,po
+2,programe_profile,rag,,,,,Cilat janë profilet e Master Shkencor në Inxhinieri Mekanike?,Energjitikë dhe Infrastrukturë Transporti,po
+3,programe_profile,rag,,,,,Cilat janë profilet e Master Shkencor në Inxhinieri Elektrike?,Energjetikë dhe Automatizim-Industri,po
+4,programe_profile,rag,,,,,Cilat janë profilet e Master Shkencor në Teknologji Informacioni?,Zhvillim Softweresh; IT e biznesit; Menaxhim dhe Vlerësim Projektesh; Inovacion,po
+5,programe_profile,rag,,,,,Cilat janë profilet e Master Shkencor në Inxhinieri Informatike?,Inxhinieri Softwere-sh; Siguria e sistemeve të informacionit; Menaxhim të dhënash; Dizenjim dhe zhvillim aplikimesh,po
+6,lende_kredite,rag,,,,,Sa ECTS ka lënda Inteligjenca artificiale në Master Inxhinieri Informatike?,6 ECTS; viti II; semestri 1,po
+7,lende_kredite,rag,,,,,Në cilin vit dhe semestër jepet Metoda kërkimi në inxhinieri te Master Inxhinieri Ndërtimi?,Viti II; semestri 1 (6 ECTS),po
+8,lende_kredite,rag,,,,,Në cilin vit dhe semestër jepet Metoda kërkimi në inxhinieri te Master Inxhinieri Informatike?,Viti I; semestri 1 (6 ECTS),po
+9,lende_kredite,rag,,,,,Sa ECTS ka Punimi i diplomës te Master Inxhinieri Elektrike?,24 ECTS,po
+10,lende_kredite,rag,,,,,Sa ECTS ka Punimi i diplomës te Master Inxhinieri Ndërtimi?,28 ECTS,po
+11,lende_kredite,rag,,,,,Sa ECTS ka Mekanika e Dherave Shkembit dhe Themeleve në Inxhinieri Ndërtimi?,10 ECTS; viti I; semestri 1,po
+12,lende_kredite,rag,,,,,Sa ECTS ka lënda Zhvillim Webi: aplikime dhe programim në Teknologji Informacioni?,10 ECTS; viti II; semestri 2,po
+13,lende_kredite,rag,,,,,Sa ECTS ka Praktika profesionale te Master Inxhinieri Mekanike?,12 ECTS,po
+14,lende_kredite,rag,,,,,A është Inteligjenca artificiale lëndë profili te Master Teknologji Informacioni?,Po; te profili Zhvillim Softweresh; 6 ECTS; viti II; semestri 1,po
+15,lende_kredite,rag,,,,,Cilat lëndë ka profili Siguria e sistemeve të informacionit në Inxhinieri Informatike?,Kontrolli dhe auditimi i sigurisë në rrjetat kompjuterike; Menaxhimi i riskut në IT; Kriptografia dhe Ethical Hacking,po
+16,lende_kredite,rag,,,,,Sa ECTS ka Menaxhimi i Rrjetave Kompjuterike në Inxhinieri Informatike?,10 ECTS; viti I; semestri 2,po
+17,punesim,rag,,,,,Cilat janë mundësitë e punësimit pas Master në Inxhinieri Ndërtimi?,Inxhinier projektues; ekspert ndërtimi; inspektor ndërtimi; inxhinier strukturash; inxhinier i infrastrukturës së transportit,po
+18,punesim,rag,,,,,Çfarë profesionesh mund të ushtrojë një i diplomuar në Master Inxhinieri Mekanike?,Menaxher strategjik projektesh industriale; inxhinier i sistemeve industriale; konsulent ndërkombëtar; inxhinier për parqe energjetike,po
+19,punesim,rag,,,,,Në cilat sektorë mund të punësohet një inxhinier elektrik me Master Shkencor?,Prodhim dhe shpërndarje energjie; industri mekanike dhe transporti; prodhim dhe mirëmbajtje; administratë publike; këshillim,po
+20,punesim,rag,,,,,A mund të pajiset me licencë një i diplomuar në Master Inxhinieri Ndërtimi?,Po; sipas kuadrit ligjor në fuqi,po
+21,jashte_korpusit,rag,,,,,Sa është tarifa vjetore e programit Master në Teknologji Informacioni?,Nuk ka përgjigje në dokumente,jo
+22,jashte_korpusit,rag,,,,,Deri kur është afati i aplikimit për vitin akademik të ri?,Nuk ka përgjigje në dokumente,jo
+23,jashte_korpusit,rag,,,,,Cili është orari i mësimit për semestrin e parë?,Nuk ka përgjigje në dokumente,jo
+24,jashte_korpusit,rag,,,,,Si mund të kontaktoj koordinatorin e programit?,Nuk ka përgjigje në dokumente,jo
+25,jashte_korpusit,rag,,,,,Cilat janë kriteret e pranimit në Bachelor në Drejtësi?,Nuk ka përgjigje në dokumente,jo
+26,rekomandim,asistent,P_DATA,,,,"Kam Bachelor në Administrim Biznesi, di SQL dhe Python dhe dua të bëhem Data Engineer. Cilin program më rekomandon?","Rekomandon programe me lëndë për të dhënat, p.sh. MSH Informatikë Ekonomike, MSc Teknologji Informacioni, MSc Inxhinieri Informatike, MP Informatikë e Aplikuar (profili Menaxhim të dhënash) ose MP TI e Aplikuar në Financë; përmend lëndë si Projektim dhe analizë e bazave të të dhënave, SQL server dhe platformat e raportimit, Menaxhim në Big Data; faktet citohen me burim; gjykimet shënohen si interpretim; pa pikë numerike",po
+27,pyetje_ndjekese,asistent,P_BOSH,,,,Cilin program master më rekomandon?,Nuk jep ende rekomandim; bën pyetje ndjekëse për sfondin akademik dhe/ose objektivin e karrierës,po
+28,rekomandim,asistent,P_FIN,,,,Dua të punoj si analist rreziku në një bankë. Cili program i UET-it më përshtatet?,"MSH Financë (profili Auditim dhe Menaxhim Risku; lënda Manaxhimi i riskut të institucioneve financiare, 10 ECTS); dokumenti i MSH Financë përmend 'analist rreziku dhe menaxhim portofoli' te mundësitë e punësimit; mund të përmendet edhe MP Financë; me burime",po
+29,krahasim,asistent,P_DATA,,,,Krahaso Master i Shkencave në Informatikë Ekonomike me Master i Shkencave në Teknologji Informacioni për objektivin tim.,"Tabelë me vlerësime cilësore (e lartë/e mesme/e ulët/pa të dhëna); të dy 120 ECTS; të dy kanë Projektim i bazave të të dhënave, SQL server, Big Data (te TI vetëm në profilin Zhvillim Softweresh); dokumenti i TI nuk ka objektiva apo mundësi punësimi, pra 'pa të dhëna' për këtë; segmente nga të dy programet",po
+30,analize_boshlleqesh,asistent,P_DATA,,,,Çfarë aftësish më mungojnë për t'u bërë Data Engineer?,Liston lëndët që mbulojnë aftësi të lidhura me të dhënat; thotë hapur që nivelet e kërkuara të aftësive / rezultatet e të nxënit për lëndët nuk specifikohen në dokumente; nuk shpik nivele,po
+31,po_sikur,asistent,P_DATA,,,,Po sikur të zgjedh Master Profesional në Informatikë e Aplikuar me profilin Siguria e sistemeve të informacionit në vend të profilit Menaxhim të dhënash?,"Profili Siguria: Kontrolli dhe auditimi i sigurisë në rrjetat kompjuterike, Menaxhimi i riskut në IT, Kriptografia dhe Ethical Hacking (6 ECTS secila); profili Menaxhim të dhënash: SQL server, Kriptografia dhe Ethical Hacking, Menaxhim në Big Data; Siguria përputhet më pak me objektivin Data Engineer (interpretim); programi 60 ECTS",po
+32,rruge_akademike,asistent,P_DATA,,,,Më sugjero rrugën akademike më të përshtatshme sipas profilit tim.,"Përgjigje e strukturuar (rekomandimi, pse përshtatet, lëndët përkatëse, boshllëqet, rruga e sugjeruar, drejtimi i karrierës); faktet me burim; drejtimi i karrierës vetëm nga dokumentet",po
+33,kontekst_bisede,asistent,P_DATA,,,Cilat janë profilet e Master Profesional në Informatikë e Aplikuar?,Po sa ECTS ka gjithsej ky program?,60 ECTS (e kupton që 'ky program' është MP Informatikë e Aplikuar),po
+34,small_talk,asistent,P_BOSH,,,,Përshëndetje!,Përshëndetje e shkurtër dhe miqësore; orienton drejt pyetjeve që mund të trajtojë; pa burime,po
+35,pranimi,asistent,P_DATA,,,,A mund të pranohem në Master të Shkencave në Teknologji Informacioni me Bachelor në Administrim Biznesi?,Kriteret e pranimit nuk gjenden në dokumente; e thotë hapur dhe orienton te administrata; nuk shpik kritere,jo
+36,kurth,rag,,,,,Sa ECTS ka lënda Blockchain në Master Teknologji Informacioni?,Lënda nuk gjendet në planin mësimor; nuk shpik ECTS,jo
+37,kurth,rag,,,,,Cilat janë profilet e Master Shkencor në Arkitekturë?,Nuk ka dokument për këtë program; nuk shpik profile,jo
+38,jashte_korpusit,rag,,,,,Kush është dekani i fakultetit?,Nuk ka përgjigje në dokumente,jo
+39,lende_semestri,asistent,A_TI_Y2S2,,,,Çfarë lëndësh kam këtë semestër?,"Kontrolli dhe auditimi i sigurisë në rrjetat kompjuterike 6 ECTS; Zhvillim Webi: aplikime dhe programim 10 ECTS; Menaxhimi i inovacionit 6 ECTS (profili IT e biznesit); Punimi i diplomës 18 ECTS (vjetor, sem. 1-2). Shënim: Menaxhim financiar sipas planit të korrigjuar është në vitin II, sem. 1",po
+40,lende_semestri,asistent,A_TI_Y1S1,,,,Çfarë lëndësh kam këtë semestër?,"Metoda kërkimi në inxhinieri 6 ECTS; Projektim dhe Analizë e Bazave të të Dhënave 8 ECTS; Menaxhimi i proceseve të biznesit 6 ECTS; Praktikë profesionale 12 ECTS (vjetore, sem. 1-2). Profili IT e biznesit nuk ka lëndë në këtë semestër",po
+41,lende_semestri,asistent,A_FIN_Y1S2,,,,Çfarë lëndësh kam këtë semestër?,"Teori financiare 8 ECTS; Menaxhim financiar 6 ECTS; Metoda kërkimi në financë 12 ECTS dhe Praktikë/internship 12 ECTS (vjetore, sem. 1-2); lëndë sipas profilit: Kontabilitet bankar (Banka dhe tregje financiare), Auditimi financiar (Kontabilitet & raportim financiar; Auditim dhe menaxhim risku). Duhet të shënojë që lëndët e profilit varen nga specializimi dhe të mos i dublikojë",po
+42,info_lende,asistent,A_TI_Y2S2,,,,Sa ECTS ka Zhvillim Webi dhe në cilin semestër jepet?,10 ECTS; viti II; semestri 2,po
+43,lende_profili,asistent,A_TI_Y2S2,,,,A kam ndonjë lëndë për Big Data në programin tim?,"Menaxhim në Big Data (6 ECTS, viti II, sem. 2) është vetëm te profili Zhvillim Softweresh, jo te IT e biznesit",po
+44,jashte_korpusit,asistent,A_TI_Y2S2,,,,Cilat janë mundësitë e punësimit pas programit tim?,"Dokumenti i MSc Teknologji Informacioni përmban vetëm planin mësimor, pa mundësi punësimi; duhet ta thotë hapur dhe të mos marrë informacion nga programe të tjera",jo
+45,jashte_korpusit,asistent,A_TI_Y2S2,,,,Kur është provimi i lëndës Zhvillim Webi?,Nuk ka përgjigje në dokumente,jo
+46,program_tjeter,asistent,A_TI_Y2S2,,,,"Nëse do të ndryshoja drejtim, cili program tjetër i UET-it do të më përshtatej për financë?","Aktivizohet rruga e rekomandimit; programe financë, p.sh. MSH Financë, MP Financë, MP TI e Aplikuar në Financë; me burime",po
+47,study_shpjegim,asistent,A_TI_Y2S2,Zhvillim Webi: aplikime dhe programim,,,Ma shpjego DOM-in në JavaScript.,"DOM (Document Object Model) është struktura me pemë e faqes HTML me të cilën JavaScript ndërvepron për të ndryshuar elementet ose stilet; burimi: Hyrje ne Javascript.pdf, f. 2",po
+48,study_pyetje,asistent,A_TI_Y2S2,Zhvillim Webi: aplikime dhe programim,,,Çfarë është middleware në Express.js?,"Funksion me qasje në req, res dhe next në ciklin kërkesë-përgjigje; lloje: të nivelit të aplikacionit, të palëve të treta (cors, morgan, helmet), për menaxhimin e gabimeve me 4 parametra (err, req, res, next); burimi: Express.js.pdf, f. 2",po
+49,study_pyetje,asistent,A_TI_Y2S2,Zhvillim Webi: aplikime dhe programim,,,Pse Node.js nuk është zgjidhje ideale për detyra intensive CPU?,"Për shkak të natyrës single-threaded: enkriptimi i rëndë, përpunimi i videove apo llogaritjet komplekse bllokojnë Event Loop-in dhe ngadalësojnë kërkesat e tjera; burimi: Node.js.pdf, f. 2",po
+50,study_kontekst,asistent,A_TI_Y2S2,Zhvillim Webi: aplikime dhe programim,,Çfarë është Virtual DOM në React?,Po hooks?,"E kupton si hooks në React: funksione të prezantuara në React 16.8 që lejojnë komponentët funksionalë të përdorin state; useState, useEffect, useContext; burimi: React.js.pdf, f. 2",po
+51,study_quiz,asistent,A_TI_Y2S2,Zhvillim Webi: aplikime dhe programim,quiz,,Më bëj një quiz për lëndën Zhvillim Webi: aplikime dhe programim.,"8 pyetje të përziera (zgjedhje e shumëfishtë, E vërtetë/E gabuar, përgjigje e shkurtër) vetëm nga materialet (JavaScript, Node.js, Express.js, React.js); përgjigjet në fund; pa fakte jashtë materialeve",po
+52,study_flashcards,asistent,A_TI_Y2S2,Zhvillim Webi: aplikime dhe programim,flashcards,,Më krijo flashcards për lëndën Zhvillim Webi: aplikime dhe programim.,10–15 karta Pyetje/Përgjigje nga materialet e lëndës,po
+53,study_provim,asistent,A_TI_Y2S2,Zhvillim Webi: aplikime dhe programim,mock_exam,,Më bëj një test prove për lëndën Zhvillim Webi: aplikime dhe programim.,"Fillon me shënimin që është model prove dhe që formati zyrtar nuk gjendet te dokumentet; tri pjesë (teori, zgjedhje e shumëfishtë, problem praktik); përgjigjet në fund; pa pikë zyrtare",po
+54,study_pa_material,asistent,A_TI_Y2S2,Kontrolli dhe auditimi i sigurisë në rrjetat kompjuterike,quiz,,Më bëj një quiz për lëndën Kontrolli dhe auditimi i sigurisë në rrjetat kompjuterike.,Thotë që nuk ka materiale për këtë lëndë; kërkon një temë ose material nga studenti; nuk krijon quiz të shpikur,jo
+55,study_pa_material,asistent,A_TI_Y2S2,Kontrolli dhe auditimi i sigurisë në rrjetat kompjuterike,,,Më shpjego çfarë është një firewall.,"Mund të japë shpjegim të përgjithshëm, por fillon me shënimin që nuk ka materiale të lëndës dhe që kjo është përmbajtje e përgjithshme, jo nga lënda",jo
+56,study_jashte_materialit,asistent,A_TI_Y2S2,Zhvillim Webi: aplikime dhe programim,,,Çfarë janë Signals në Angular?,Materialet përmendin Angular vetëm si kornizë frontend dhe nuk trajtojnë Signals; duhet ta thotë hapur dhe të mos e paraqesë si pjesë të lëndës,jo

@@ -311,12 +311,23 @@ def course_facts(course: dict) -> str:
     )
 
 
+def unique_courses(courses: list[dict]) -> list[dict]:
+    """Heq lëndët e dyfishta sipas emrit (p.sh. e njëjta lëndë te dy grupe me zgjedhje)."""
+    seen: set[str] = set()
+    result = []
+    for course in courses:
+        if course["name"] not in seen:
+            seen.add(course["name"])
+            result.append(course)
+    return result
+
+
 def format_courses(courses: list[dict]) -> str:
     """Teksti i lëndëve për prompt, i grupuar sipas kategorisë, me faqen e burimit."""
     lines = []
     for category in [*CATEGORIES, UNKNOWN_CATEGORY]:
         label = CATEGORIES.get(category, "Lëndë (kategoria nuk përcaktohet nga dokumenti)")
-        subset = [c for c in courses if c["category"] == category]
+        subset = unique_courses([c for c in courses if c["category"] == category])
         if not subset:
             continue
         lines.append(f"{label}:")
